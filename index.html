@@ -22,7 +22,10 @@ body:before{background:#168cff;left:-180px;bottom:-180px}body:after{background:#
 .brand h1{font-size:18px;margin:0}.brand small{color:var(--muted)}
 .top-actions{display:flex;gap:8px}
 .btn{border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text);padding:9px 13px;border-radius:9px;font-weight:700;cursor:pointer;transition:.25s;box-shadow:0 5px 18px #0003}
-.btn:hover{transform:translateY(-2px);border-color:#4caeff66;box-shadow:0 12px 25px #0005}.primary{background:linear-gradient(135deg,#258cff,#1762d1);border-color:#55b7ff55}.danger{color:#ffb0b8}
+.btn:hover{transform:translateY(-2px);border-color:#4caeff66;box-shadow:0 12px 25px #0005}.primary{background:linear-gradient(135deg,#258cff,#1762d1);border-color:#55b7ff55}.danger{color:#ffb0b8;border-color:rgba(255,107,122,.3)}.danger:hover{background:rgba(255,107,122,.2);border-color:#ff6b7a}
+.del-mini-btn{background:rgba(255,107,122,.12);border:1px solid rgba(255,107,122,.25);color:#ff9fa8;border-radius:6px;padding:2px 6px;font-size:10px;font-weight:700;cursor:pointer;margin-left:6px;transition:.2s;line-height:1}
+.del-mini-btn:hover{background:#ff4d61;color:#fff;border-color:#ff4d61;transform:scale(1.08)}
+.th-content,.row-head-content{display:flex;align-items:center;justify-content:space-between;gap:6px}
 .wrap{max-width:1600px;margin:auto;padding:24px}
 .hero{display:grid;grid-template-columns:1fr 330px;gap:18px;margin-bottom:18px}
 .hero-card,.sync-card,.panel,.stat{background:linear-gradient(145deg,rgba(24,43,69,.88),rgba(10,23,40,.88));border:1px solid var(--line);border-radius:18px;box-shadow:0 22px 60px #0005;backdrop-filter:blur(15px)}
@@ -38,15 +41,20 @@ body:before{background:#168cff;left:-180px;bottom:-180px}body:after{background:#
 table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
 th,td{min-width:165px;padding:12px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);vertical-align:top}
 th{background:#102943f2;position:sticky;top:0;z-index:7;color:#dceeff;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
-th:first-child,td:first-child{position:sticky;left:0;z-index:8;min-width:125px;background:#10253cf7}
+th:first-child,td:first-child{position:sticky;left:0;z-index:8;min-width:145px;background:#10253cf7}
 th:first-child{z-index:10}
-.cell{min-height:34px;padding:6px;border-radius:7px;cursor:pointer;transition:.2s;white-space:pre-wrap}
+.cell{min-height:34px;padding:6px;border-radius:7px;cursor:pointer;transition:.2s;white-space:pre-wrap;position:relative;display:flex;align-items:center;justify-content:space-between;gap:4px}
 .cell:hover{background:linear-gradient(135deg,#2b9cff1c,#36e0ff12);box-shadow:inset 0 0 0 1px #48b5ff35;transform:translateZ(8px)}
+.cell-text{flex:1;word-break:break-word}
+.cell-clear-icon{display:none;color:#ff9fa8;font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;background:rgba(255,107,122,.18);border:1px solid rgba(255,107,122,.3);margin-left:4px;flex-shrink:0;cursor:pointer;transition:.15s}
+.cell:hover .cell-clear-icon{display:inline-block}
+.cell-clear-icon:hover{background:#ff4d61;color:#fff;border-color:#ff4d61;transform:scale(1.1)}
 .empty{color:#60758d;font-style:italic}
 .modal-bg{display:none;position:fixed;inset:0;background:#020914b8;backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px;z-index:100}
 .modal{width:min(570px,100%);padding:23px;border-radius:20px;background:linear-gradient(145deg,#172e4a,#0b1a2c);border:1px solid #6bbcff30;box-shadow:0 35px 100px #0009;transform:perspective(1000px) rotateX(2deg);animation:modalIn .25s ease}
 @keyframes modalIn{from{opacity:0;transform:perspective(1000px) rotateX(12deg) translateY(20px)}to{opacity:1;transform:perspective(1000px) rotateX(2deg)}}
-.modal h2{margin-top:0}.field{margin-top:12px}.field label{display:block;font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:700}.field textarea{width:100%;min-height:125px;resize:vertical}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:15px}
+.modal h2{margin-top:0}.field{margin-top:12px}.field label{display:block;font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:700}.field textarea{width:100%;min-height:125px;resize:vertical}.modal-actions{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:15px}
+.modal-btn-group{display:flex;gap:8px}
 .toast{display:none;position:fixed;right:22px;bottom:22px;padding:12px 16px;background:#102c46;border:1px solid #55b7ff44;border-radius:10px;box-shadow:0 15px 40px #0007;z-index:200}
 @media(max-width:900px){.hero{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.wrap{padding:14px}.top{padding:0 14px}.top-actions .btn:first-child{display:none}}
 </style>
@@ -55,8 +63,9 @@ th:first-child{z-index:10}
 <header class="top">
   <div class="brand"><div class="logo">4i</div><div><h1>Daily Management Tracker</h1><small>Google Sheets connected workspace</small></div></div>
   <div class="top-actions">
-    <button class="btn" onclick="googleLogin()">Sign in with Google</button>
-    <button class="btn primary" onclick="loadSheet()">↻ Sync</button>
+    <button id="loginBtn" class="btn" onclick="googleLogin()">Sign in with Google</button>
+    <button id="logoutBtn" class="btn danger" style="display:none" onclick="googleLogout()">Sign Out</button>
+    <button class="btn primary" onclick="refreshAll()">↻ Sync</button>
   </div>
 </header>
 
@@ -69,7 +78,7 @@ th:first-child{z-index:10}
     <div class="sync-card">
       <div class="sync-title"><span class="sync-dot"></span><span id="syncText">Not connected</span></div>
       <p style="color:var(--muted);font-size:13px">Last sync: <span id="lastSync">—</span></p>
-      <button class="btn primary" onclick="loadSheet()">Refresh Data</button>
+      <button class="btn primary" onclick="refreshAll()">Refresh Data</button>
     </div>
   </section>
 
@@ -89,14 +98,17 @@ th:first-child{z-index:10}
 
   <div class="toolbar">
     <input id="search" class="input search" placeholder="Search activity..." oninput="render()">
-    <button class="btn" onclick="addDate()">＋ Add Column (Date)</button>
-    <button class="btn" onclick="addTime()">＋ Add Row (Time)</button>
+    <button class="btn" onclick="addDate()">＋ Add Column</button>
+    <button class="btn" onclick="addTime()">＋ Add Row</button>
+    <button class="btn danger" onclick="clearSelected()">🧹 Clear Cell</button>
+    <button class="btn danger" onclick="deleteColumnPrompt()">🗑️ Delete Column</button>
+    <button class="btn danger" onclick="deleteRowPrompt()">🗑️ Delete Row</button>
+    <button class="btn danger" onclick="deleteCurrentSheet()">🗑️ Delete Sheet</button>
     <button class="btn" onclick="refreshAll()">↻ Refresh</button>
-    <button class="btn danger" onclick="clearSelected()">Clear Cell</button>
   </div>
 
   <section class="panel">
-    <div class="panel-head"><h3 id="sheetTitle">Daily Activity Planner</h3><span>Click a cell to edit • Double-click a date column to rename</span></div>
+    <div class="panel-head"><h3 id="sheetTitle">Daily Activity Planner</h3><span>Click cell to edit • ✕ on cell to clear • Double-click date to rename</span></div>
     <div class="table-wrap"><table id="grid"></table></div>
   </section>
 </main>
@@ -107,7 +119,16 @@ th:first-child{z-index:10}
     <div class="field"><label>TIME</label><input id="mTime" class="input" readonly></div>
     <div class="field"><label>DATE</label><input id="mDate" class="input" readonly></div>
     <div class="field"><label>ACTIVITY</label><textarea id="mValue" class="input" placeholder="Enter your activity..."></textarea></div>
-    <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveCell()">Save to Google Sheet</button></div>
+    <div class="modal-actions">
+      <div class="modal-btn-group">
+        <button class="btn danger" onclick="modalClearCell()">🧹 Clear Cell</button>
+        <button class="btn danger" onclick="modalDeleteRow()">🗑️ Delete Row</button>
+      </div>
+      <div class="modal-btn-group">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn primary" onclick="saveCell()">Save to Sheet</button>
+      </div>
+    </div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -121,7 +142,7 @@ const CONFIG={
   SCOPES:"https://www.googleapis.com/auth/spreadsheets"
 };
 
-let accessToken=null, data=[], currentSheet=CONFIG.SHEET_NAME, selected=null, availableSheets=[];
+let accessToken=null, data=[], currentSheet=CONFIG.SHEET_NAME, selected=null, availableSheets=[], sheetMap={};
 
 function googleLogin(){
   if(CONFIG.GOOGLE_CLIENT_ID.startsWith("XXXX")) return alert("Replace GOOGLE_CLIENT_ID with your Google OAuth Client ID.");
@@ -130,12 +151,33 @@ function googleLogin(){
     callback:async r=>{
       if(r.error)return alert("Google OAuth Error: "+JSON.stringify(r));
       accessToken=r.access_token;
+      document.getElementById("loginBtn").style.display="none";
+      document.getElementById("logoutBtn").style.display="inline-block";
       setSync("Connected");
       await fetchSheetTabs();
       await loadSheet();
     }
   });
   client.requestAccessToken();
+}
+
+function googleLogout(){
+  if(accessToken){
+    try{
+      google.accounts.oauth2.revoke(accessToken, ()=>{
+        console.log("Token revoked");
+      });
+    }catch(e){}
+  }
+  accessToken=null;
+  data=[];
+  selected=null;
+  document.getElementById("loginBtn").style.display="inline-block";
+  document.getElementById("logoutBtn").style.display="none";
+  setSync("Not connected");
+  document.getElementById("lastSync").textContent="—";
+  render();
+  toast("Signed out successfully");
 }
 
 async function api(url,options={}){
@@ -152,9 +194,16 @@ async function api(url,options={}){
 async function fetchSheetTabs(){
   if(!accessToken)return;
   try{
-    const res=await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}?fields=sheets.properties.title`);
+    const res=await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}?fields=sheets.properties(sheetId,title)`);
     if(res.sheets&&res.sheets.length){
-      availableSheets=res.sheets.map(s=>s.properties.title);
+      sheetMap={};
+      availableSheets=res.sheets.map(s=>{
+        sheetMap[s.properties.title]=s.properties.sheetId;
+        return s.properties.title;
+      });
+      if(!availableSheets.includes(currentSheet)){
+        currentSheet=availableSheets[0];
+      }
       renderTabs();
     }
   }catch(e){console.warn("Could not fetch sheet list:",e)}
@@ -241,11 +290,28 @@ function render(){
 
   data[0].forEach((v,c)=>{
     const th=document.createElement("th");
-    th.textContent=v||(c===0?"TIME":`Column ${c+1}`);
+    const div=document.createElement("div");
+    div.className="th-content";
+    
+    const label=document.createElement("span");
+    label.textContent=v||(c===0?"TIME":`Column ${c+1}`);
+    div.appendChild(label);
+
     if(c>0){
       th.title="Double-click to rename";
       th.ondblclick=()=>renameDate(c+1);
+      
+      const delBtn=document.createElement("button");
+      delBtn.className="del-mini-btn";
+      delBtn.textContent="✕";
+      delBtn.title="Delete column";
+      delBtn.onclick=(e)=>{
+        e.stopPropagation();
+        deleteColumn(c+1, v||`Column ${c+1}`);
+      };
+      div.appendChild(delBtn);
     }
+    th.appendChild(div);
     head.appendChild(th);
   });
   thead.appendChild(head);grid.appendChild(thead);
@@ -258,12 +324,44 @@ function render(){
       const td=document.createElement("td");
       if(c===0){
         td.style.fontWeight="700";
-        td.textContent=row[0]||"";
+        const div=document.createElement("div");
+        div.className="row-head-content";
+        const label=document.createElement("span");
+        label.textContent=row[0]||"";
+        div.appendChild(label);
+        
+        const delBtn=document.createElement("button");
+        delBtn.className="del-mini-btn";
+        delBtn.textContent="✕";
+        delBtn.title="Delete row";
+        delBtn.onclick=(e)=>{
+          e.stopPropagation();
+          deleteRow(i+2, row[0]||`Row ${i+2}`);
+        };
+        div.appendChild(delBtn);
+        td.appendChild(div);
       }else{
         const div=document.createElement("div");
         div.className="cell";
         const v=row[c]||"";
-        div.innerHTML=v?escapeHtml(v):'<span class="empty">Click to update</span>';
+        
+        const textSpan=document.createElement("span");
+        textSpan.className="cell-text";
+        textSpan.innerHTML=v?escapeHtml(v):'<span class="empty">Click to update</span>';
+        div.appendChild(textSpan);
+
+        if(v&&v.trim()){
+          const clrBtn=document.createElement("span");
+          clrBtn.className="cell-clear-icon";
+          clrBtn.textContent="✕ Clear";
+          clrBtn.title="Clear this cell";
+          clrBtn.onclick=(e)=>{
+            e.stopPropagation();
+            clearCellDirect(i+2, c+1);
+          };
+          div.appendChild(clrBtn);
+        }
+
         div.onclick=()=>openEditor(i+2,c+1,row[0]||"",data[0][c]||"",v);
         td.appendChild(div);
       }
@@ -311,7 +409,48 @@ async function saveCell(){
   }catch(e){alert(e.message)}
 }
 
-/* ================= ADD COLUMN (DATE) ================= */
+async function clearCellDirect(row, col){
+  const cell=colName(col)+row;
+  const range=`'${currentSheet}'!${cell}`;
+  try{
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}:clear`,{method:"POST"});
+    toast(`Cleared cell ${cell}`);
+    loadSheet();
+  }catch(e){alert(e.message)}
+}
+
+async function clearSelected(){
+  if(selected){
+    await clearCellDirect(selected.row, selected.col);
+    closeModal();
+    return;
+  }
+  const promptCell=prompt("Enter the cell coordinate to clear (e.g. B2, C4):");
+  if(!promptCell)return;
+  const cleaned=promptCell.trim().toUpperCase();
+  const range=`'${currentSheet}'!${cleaned}`;
+  try{
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}:clear`,{method:"POST"});
+    toast(`Cleared cell ${cleaned}`);
+    loadSheet();
+  }catch(e){alert(e.message)}
+}
+
+async function modalClearCell(){
+  if(!selected)return;
+  document.getElementById("mValue").value="";
+  await saveCell();
+}
+
+async function modalDeleteRow(){
+  if(!selected)return;
+  const rowToDelete=selected.row;
+  const timeName=document.getElementById("mTime").value||`Row ${rowToDelete}`;
+  closeModal();
+  await deleteRow(rowToDelete, timeName);
+}
+
+/* ================= ADD / DELETE COLUMN ================= */
 async function addDate(){
   const date=prompt("Enter Date / Column Header (e.g., 23-Aug):");
   if(!date)return;
@@ -329,7 +468,42 @@ async function addDate(){
   }catch(e){alert(e.message)}
 }
 
-/* ================= ADD ROW (TIME) ================= */
+async function deleteColumn(col1Based, colNameText=""){
+  if(!confirm(`Are you sure you want to delete column "${colNameText||col1Based}"?`))return;
+  const currentSheetId=sheetMap[currentSheet]??0;
+  try{
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        requests:[{
+          deleteDimension:{
+            range:{
+              sheetId:currentSheetId,
+              dimension:"COLUMNS",
+              startIndex:col1Based-1,
+              endIndex:col1Based
+            }
+          }
+        }]
+      })
+    });
+    toast(`Deleted column "${colNameText}"`);
+    loadSheet();
+  }catch(e){alert(e.message)}
+}
+
+async function deleteColumnPrompt(){
+  if(!data.length||data[0].length<=1)return alert("No columns available to delete.");
+  const colList=data[0].slice(1).map((v,i)=>`${i+2}: ${v||('Column '+(i+2))}`).join("\n");
+  const choice=prompt("Enter the column number to delete:\n\n"+colList);
+  if(!choice)return;
+  const colNum=parseInt(choice.trim(),10);
+  if(isNaN(colNum)||colNum<2||colNum>data[0].length)return alert("Invalid column number.");
+  deleteColumn(colNum, data[0][colNum-1]);
+}
+
+/* ================= ADD / DELETE ROW ================= */
 async function addTime(){
   const time=prompt("Enter Time Slot (e.g., 7-8 PM):");
   if(!time)return;
@@ -347,7 +521,42 @@ async function addTime(){
   }catch(e){alert(e.message)}
 }
 
-/* ================= ADD NEW SHEET (TAB) ================= */
+async function deleteRow(row1Based, rowNameText=""){
+  if(!confirm(`Are you sure you want to delete row "${rowNameText||row1Based}"?`))return;
+  const currentSheetId=sheetMap[currentSheet]??0;
+  try{
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        requests:[{
+          deleteDimension:{
+            range:{
+              sheetId:currentSheetId,
+              dimension:"ROWS",
+              startIndex:row1Based-1,
+              endIndex:row1Based
+            }
+          }
+        }]
+      })
+    });
+    toast(`Deleted row "${rowNameText}"`);
+    loadSheet();
+  }catch(e){alert(e.message)}
+}
+
+async function deleteRowPrompt(){
+  if(data.length<=1)return alert("No rows available to delete.");
+  const rowList=data.slice(1).map((r,i)=>`${i+2}: ${r[0]||('Row '+(i+2))}`).join("\n");
+  const choice=prompt("Enter the row number to delete:\n\n"+rowList);
+  if(!choice)return;
+  const rowNum=parseInt(choice.trim(),10);
+  if(isNaN(rowNum)||rowNum<2||rowNum>data.length)return alert("Invalid row number.");
+  deleteRow(rowNum, data[rowNum-1][0]);
+}
+
+/* ================= ADD / DELETE SHEET ================= */
 async function addNewSheet(){
   const title=prompt("Enter new Sheet name:");
   if(!title)return;
@@ -359,7 +568,6 @@ async function addNewSheet(){
         requests:[{addSheet:{properties:{title}}}]
       })
     });
-    // Initialize header row for the new sheet
     const initRange=`'${title}'!A1:D1`;
     await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(initRange)}?valueInputOption=USER_ENTERED`,{
       method:"PUT",
@@ -373,14 +581,22 @@ async function addNewSheet(){
   }catch(e){alert(e.message)}
 }
 
-async function clearSelected(){
-  if(!selected)return alert("Click on a cell first to select it.");
-  const range=`'${currentSheet}'!${colName(selected.col)}${selected.row}`;
+async function deleteCurrentSheet(){
+  if(availableSheets.length<=1)return alert("Cannot delete the only sheet in the spreadsheet.");
+  if(!confirm(`Are you sure you want to permanently delete the sheet "${currentSheet}"?`))return;
+  const currentSheetId=sheetMap[currentSheet];
+  if(currentSheetId===undefined)return alert("Sheet ID not found.");
   try{
-    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}:clear`,{method:"POST"});
-    selected=null;
-    toast("Cell cleared");
-    loadSheet();
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        requests:[{deleteSheet:{sheetId:currentSheetId}}]
+      })
+    });
+    toast(`Deleted sheet "${currentSheet}"`);
+    await fetchSheetTabs();
+    await loadSheet();
   }catch(e){alert(e.message)}
 }
 
