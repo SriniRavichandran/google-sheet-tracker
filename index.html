@@ -1886,7 +1886,7 @@ async function deleteHabitRowDirect(hIdx) {
   toast(`Removed habit "${h.title}" from Google Sheet`);
 }
 
-/* Auto Next Date Feature: Auto-increment date header with grid limit expansion and month rollover */
+/* Auto Next Date Feature: Auto-increment date header directly as a column in current sheet tab */
 async function autoIncrementNextDate() {
   if (!accessToken) return googleLogin();
   markUserEditing();
@@ -1912,37 +1912,11 @@ async function autoIncrementNextDate() {
   const dayNumStr = dayNum < 10 ? `0${dayNum}` : `${dayNum}`;
   const nextLabel = `${dayNumStr}-${monthShortStr}`;
 
-  // Check if month changed (e.g., August closed -> September created)
+  // Update active month dropdown state seamlessly in current sheet tab
   if (monthIdx !== currentMonth) {
     currentMonth = monthIdx;
     currentYear = nextDateObj.getFullYear();
     document.getElementById("monthSelect").value = `${currentYear}-${currentMonth}`;
-
-    const newMonthTabName = `${MONTH_NAMES[monthIdx]} ${currentYear}`;
-    if (!availableSheets.includes(newMonthTabName)) {
-      try {
-        await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            requests: [{
-              addSheet: {
-                properties: {
-                  title: newMonthTabName,
-                  gridProperties: { columnCount: 40, rowCount: 100 }
-                }
-              }
-            }]
-          })
-        });
-        await fetchSheetTabs();
-        currentSheet = newMonthTabName;
-        renderTabs();
-        toast(`Created new month sheet tab "${newMonthTabName}"!`);
-      } catch (e) {
-        console.warn("Auto new month sheet creation error:", e);
-      }
-    }
   }
 
   const nextColIdx = (data && data.length > 0) ? data[0].length : 1;
@@ -1965,9 +1939,8 @@ async function autoIncrementNextDate() {
       body: JSON.stringify({ range, values: [[nextLabel]] })
     });
     document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
-    toast(`Added date column "${nextLabel}" to Google Sheet`);
+    toast(`Added column "${nextLabel}" to Google Sheet`);
   } catch (e) {
-    // If Grid limit error (400 exceeds grid limits), expand columns via batchUpdate appendDimension then retry
     if (e.message.includes("exceeds grid limits") || e.message.includes("400")) {
       await appendGridColumnsIfNeeded(20);
       try {
@@ -1977,7 +1950,7 @@ async function autoIncrementNextDate() {
           body: JSON.stringify({ range, values: [[nextLabel]] })
         });
         document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
-        toast(`Expanded grid & added date "${nextLabel}" to Google Sheet!`);
+        toast(`Added column "${nextLabel}" to Google Sheet!`);
         return;
       } catch (retryErr) {
         alert("Google API Error: " + retryErr.message);
