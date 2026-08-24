@@ -910,9 +910,15 @@ tr.drag-over {
       <button id="btnViewActivity" class="mode-btn" onclick="setViewMode('activity')">📋 Schedule / Activity</button>
     </div>
 
-    <select id="monthSelect" class="month-picker" onchange="onMonthChange()">
-      <!-- Month Options -->
-    </select>
+    <!-- Separate Month and Year Dropdowns -->
+    <div style="display:inline-flex;gap:6px;align-items:center;">
+      <select id="monthSelect" class="month-picker" onchange="onMonthYearChange()">
+        <!-- Month Options -->
+      </select>
+      <select id="yearSelect" class="month-picker" onchange="onMonthYearChange()">
+        <!-- Year Options -->
+      </select>
+    </div>
 
     <button id="loginBtn" class="btn primary" onclick="googleLogin()">
       <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.761H12.545z"/></svg>
@@ -1181,7 +1187,7 @@ const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Se
 
 /* ================= INIT ================= */
 window.addEventListener("DOMContentLoaded", async () => {
-  initMonthPicker();
+  initYearMonthPickers();
   renderTabs();
   render();
 
@@ -1224,15 +1230,27 @@ function toggleDeleteMode() {
   toast(`Table Trash Icons: ${deleteMode ? 'VISIBLE 🗑️' : 'HIDDEN 🔒'}`);
 }
 
-function initMonthPicker() {
-  const select = document.getElementById("monthSelect");
-  select.innerHTML = "";
+function initYearMonthPickers() {
+  const mSelect = document.getElementById("monthSelect");
+  mSelect.innerHTML = "";
   for (let m = 0; m < 12; m++) {
     const opt = document.createElement("option");
-    opt.value = `${currentYear}-${m}`;
-    opt.textContent = `${MONTH_NAMES[m]} ${currentYear}`;
+    opt.value = m;
+    opt.textContent = MONTH_NAMES[m];
     if (m === currentMonth) opt.selected = true;
-    select.appendChild(opt);
+    mSelect.appendChild(opt);
+  }
+
+  const ySelect = document.getElementById("yearSelect");
+  ySelect.innerHTML = "";
+  const startYr = 2024;
+  const endYr = 2032;
+  for (let y = startYr; y <= endYr; y++) {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = y;
+    if (y === currentYear) opt.selected = true;
+    ySelect.appendChild(opt);
   }
 }
 
@@ -1433,7 +1451,8 @@ async function loadSheet() {
 
       if (customDateCols.length > 0 && customDateCols[0].monthIndex !== undefined) {
         currentMonth = customDateCols[0].monthIndex;
-        document.getElementById("monthSelect").value = `${currentYear}-${currentMonth}`;
+        document.getElementById("monthSelect").value = currentMonth;
+        document.getElementById("yearSelect").value = currentYear;
       }
 
       for (let r = 1; r < rawValues.length; r++) {
@@ -1532,14 +1551,17 @@ function switchSheetTab(name) {
 /* ================= MAIN RENDER ROUTER ================= */
 function render() {
   const monthPicker = document.getElementById("monthSelect");
+  const yearPicker = document.getElementById("yearSelect");
   const analyticsSec = document.getElementById("analyticsSection");
 
   if (viewMode === "habit") {
     monthPicker.style.display = "inline-block";
+    yearPicker.style.display = "inline-block";
     analyticsSec.style.display = "grid";
     renderHabitWorkspace();
   } else {
     monthPicker.style.display = "none";
+    yearPicker.style.display = "none";
     analyticsSec.style.display = "none";
     renderActivityWorkspace();
   }
@@ -1650,7 +1672,7 @@ function renderHabitWorkspace() {
   const overallPct = totalPossible ? Math.round((totalDone / totalPossible) * 100) : 0;
   document.getElementById("overallPctBadge").textContent = `${overallPct}%`;
 
-  document.getElementById("stat1Label").textContent = `${MONTH_NAMES[currentMonth]} Completion Rate`;
+  document.getElementById("stat1Label").textContent = `${MONTH_NAMES[currentMonth]} ${currentYear} Completion Rate`;
   document.getElementById("stat1Val").textContent = `${overallPct}%`;
   document.getElementById("stat1Sub").textContent = `${totalDone} 🟢 Done / ${totalMissed} 🔴 Missed`;
 
@@ -1977,11 +1999,12 @@ async function autoIncrementNextDate() {
   const dayNumStr = dayNum < 10 ? `0${dayNum}` : `${dayNum}`;
   const nextLabel = `${dayNumStr}-${monthShortStr}`;
 
-  // Keep tracking in the SAME sheet tab, update currentMonth dropdown if month rolls over
-  if (monthIdx !== currentMonth) {
+  // Keep tracking in the SAME sheet tab, update month/year dropdowns if month rolls over
+  if (monthIdx !== currentMonth || nextDateObj.getFullYear() !== currentYear) {
     currentMonth = monthIdx;
     currentYear = nextDateObj.getFullYear();
-    document.getElementById("monthSelect").value = `${currentYear}-${currentMonth}`;
+    document.getElementById("monthSelect").value = currentMonth;
+    document.getElementById("yearSelect").value = currentYear;
   }
 
   const nextColIdx = (data && data.length > 0) ? data[0].length : 1;
@@ -2053,7 +2076,7 @@ async function populateFullMonthDates() {
   render();
 
   await saveFullHabitsToGoogleSheet();
-  toast(`Populated ${daysInMonth} dates in Google Sheet for ${MONTH_NAMES[currentMonth]}`);
+  toast(`Populated ${daysInMonth} dates in Google Sheet for ${MONTH_NAMES[currentMonth]} ${currentYear}`);
 }
 
 /* Populate dates for specified month into sheet tab if they don't exist yet */
@@ -2996,17 +3019,41 @@ function serializeHabitCell(status, note) {
   return status;
 }
 
-async function onMonthChange() {
-  const val = document.getElementById("monthSelect").value;
-  const [yr, mo] = val.split("-").map(Number);
-  currentYear = yr;
-  currentMonth = mo;
+function initYearMonthPickers() {
+  const mSelect = document.getElementById("monthSelect");
+  mSelect.innerHTML = "";
+  for (let m = 0; m < 12; m++) {
+    const opt = document.createElement("option");
+    opt.value = m;
+    opt.textContent = MONTH_NAMES[m];
+    if (m === currentMonth) opt.selected = true;
+    mSelect.appendChild(opt);
+  }
+
+  const ySelect = document.getElementById("yearSelect");
+  ySelect.innerHTML = "";
+  const startYr = 2024;
+  const endYr = 2032;
+  for (let y = startYr; y <= endYr; y++) {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = y;
+    if (y === currentYear) opt.selected = true;
+    ySelect.appendChild(opt);
+  }
+}
+
+async function onMonthYearChange() {
+  const moVal = parseInt(document.getElementById("monthSelect").value, 10);
+  const yrVal = parseInt(document.getElementById("yearSelect").value, 10);
+  currentMonth = moVal;
+  currentYear = yrVal;
 
   const monthShortStr = MONTH_SHORT[currentMonth].toLowerCase();
   const hasMonthCols = customDateCols.some(col => col.label.toLowerCase().includes(monthShortStr));
 
   if (!hasMonthCols && accessToken) {
-    toast(`Creating date columns for ${MONTH_NAMES[currentMonth]}...`);
+    toast(`Creating date columns for ${MONTH_NAMES[currentMonth]} ${currentYear}...`);
     await populateDatesForMonth(currentYear, currentMonth);
   } else {
     render();
