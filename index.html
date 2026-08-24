@@ -893,7 +893,7 @@ tr.drag-over {
     <div class="logo">4i</div>
     <div class="brand-text">
       <h1>Daily Management & Habit Suite</h1>
-      <small>Google Sheets Connected Workspace <span id="syncBadge" class="sync-badge"><span id="syncDot" class="sync-dot offline"></span> <span id="syncText">Sign In Required</span></span></small>
+      <small>Google Sheets Connected Workspace • <span style="color:var(--cyan);font-weight:700;">Max Limits: 18,278 Cols (ZZZ) | 10M Cells</span> <span id="syncBadge" class="sync-badge"><span id="syncDot" class="sync-dot offline"></span> <span id="syncText">Sign In Required</span></span></small>
     </div>
   </div>
 
@@ -934,7 +934,7 @@ tr.drag-over {
           <span style="background:rgba(53,211,153,0.18);color:var(--green);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:800;" id="heroTabType">🔥 Habit Checkmark Mode</span>
         </div>
         <p class="hero-subtitle" id="heroDesc">
-          Track daily checkmarks, drag & drop to reorder habits, configure target frequencies (Daily, 1x/Week, 1x/Month, 4x/Year), and analyze weekly progress. 100% online synced with Google Sheets.
+          Track daily checkmarks, drag & drop to reorder habits, configure target frequencies (Daily, 1x/Week, 1x/Month, 4x/Year), and analyze weekly progress. 100% online synced with Google Sheets (Supports up to 18,278 columns and 10,000,000 cells).
         </p>
       </div>
       <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;" id="heroActionBtns">
@@ -1134,7 +1134,9 @@ const CONFIG = {
   GOOGLE_CLIENT_ID: "223951688164-fpfp028pti606lavi5iel7rihgts878v.apps.googleusercontent.com",
   GOOGLE_SHEET_ID: "1RLzyoUbukIBBovTmdciqBD30_VVtuFNZgQTieA2OK9I",
   SHEET_NAME: "Habit Tracker",
-  SCOPES: "https://www.googleapis.com/auth/spreadsheets"
+  SCOPES: "https://www.googleapis.com/auth/spreadsheets",
+  MAX_COLUMNS: 18278, // Maximum Columns Supported by Google Sheets (Column ZZZ)
+  MAX_TOTAL_CELLS: 10000000 // Maximum Total Cells Supported by Google Sheets
 };
 
 let accessToken = null;
@@ -1248,7 +1250,7 @@ function detectStartColIndex(headerRow) {
   return 1; // Date starts at Col B (Index 1) - Matching user's exact sheet!
 }
 
-/* Helper to expand Google Sheet grid columns dynamically when column limits are reached */
+/* Helper to expand Google Sheet grid columns dynamically up to 18,278 columns (Column ZZZ) */
 async function appendGridColumnsIfNeeded(numColumnsToAdd = 20) {
   if (!accessToken) return;
   const currentSheetId = sheetMap[currentSheet] ?? 0;
@@ -1538,7 +1540,7 @@ function getActiveMonthDateCols() {
 function renderHabitWorkspace() {
   document.getElementById("heroTitle").textContent = `${currentSheet}`;
   document.getElementById("heroTabType").textContent = "🔥 Habit Checkmark Mode";
-  document.getElementById("heroDesc").textContent = "Track daily checkmarks, drag & drop to reorder habits, configure target frequencies (Daily, 1x/Week, 1x/Month, 4x/Year), and analyze weekly progress. 100% online synced with Google Sheets.";
+  document.getElementById("heroDesc").textContent = "Track daily checkmarks, drag & drop to reorder habits, configure target frequencies (Daily, 1x/Week, 1x/Month, 4x/Year), and analyze weekly progress. 100% online synced with Google Sheets (Supports up to 18,278 columns and 10,000,000 cells).";
 
   const heroBtns = document.getElementById("heroActionBtns");
   heroBtns.innerHTML = `
@@ -2161,7 +2163,7 @@ function renderHabitStatusList() {
 function renderActivityWorkspace() {
   document.getElementById("heroTitle").textContent = `${currentSheet} - Activity Schedule`;
   document.getElementById("heroTabType").textContent = "📋 Schedule / Activity Planner Mode";
-  document.getElementById("heroDesc").textContent = "Manage daily activity schedules, time slots, and team tasks. Synchronized directly with Google Sheets.";
+  document.getElementById("heroDesc").textContent = "Manage daily activity schedules, time slots, and team tasks. Synchronized directly with Google Sheets (Supports up to 18,278 columns and 10,000,000 cells).";
 
   const heroBtns = document.getElementById("heroActionBtns");
   heroBtns.innerHTML = `
@@ -2848,13 +2850,13 @@ async function saveFullHabitsToGoogleSheet() {
     rows.push(row);
   });
 
-  // Expand sheet columns if writing past default 26 columns
+  // Expand sheet columns if writing past default 25 columns
   if (headers.length > 25) {
     await appendGridColumnsIfNeeded(20);
   }
 
   try {
-    const clearRange = `'${currentSheet}'!1:1000`;
+    const clearRange = `'${currentSheet}'!1:10000`;
     await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(clearRange)}:clear`, {
       method: "POST"
     });
@@ -2938,10 +2940,10 @@ function toggleAnalyticsView() {
   sec.style.display = sec.style.display === "none" ? "grid" : "none";
 }
 
-/* Helpers */
+/* Helper to convert column index to lettering up to Column ZZZ (18,278 columns) */
 function colName(n) {
   let s = "";
-  while (n) {
+  while (n > 0) {
     let r = (n - 1) % 26;
     s = String.fromCharCode(65 + r) + s;
     n = Math.floor((n - 1) / 26);
