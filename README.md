@@ -1,27 +1,31 @@
-# 4iApps 3D Google Sheets Tracker
+# 4iApps 3D Google Sheets Tracker & Habit Suite
 
-Replace in index.html:
-- GOOGLE_CLIENT_ID = XXXX.apps.googleusercontent.com
-- GOOGLE_SHEET_ID = XXXX
+Full-featured 3D Glassmorphic Google Sheets Workspace supporting both Daily Activity Management and Habit Tracking.
 
-Google Sheet layout:
-DATE | 18-Aug | 19-Aug | 20-Aug
-9-10 AM | Meeting | Meeting |
-10-11 AM | Documentation | PRD |
-11-12 PM | Break | Review |
+## Features
 
-Features:
-- 3D/glass UI
-- Google login
-- Google Sheets read/write
-- Update cells
-- Add date column
-- Add time row
-- Clear cell
-- Rename dates
-- Search
-- Auto-sync every 30 seconds
-- Manual refresh
-- Daily Activity Planner / Daily Focus / Manage Conflict tabs
+### 📅 Activity Planner Mode ("Daily Activity Planner", "Daily Focus", "Manage Conflict")
+- **3D / Glass UI**: Modern dark theme with glowing accents and perspective cards.
+- **Time Slot & Date Grid**: Interactive schedule matrix.
+- **Cell Operations**: Click to edit activity details, clear cells, add/delete time rows and date columns.
+- **Search & Filter**: Real-time searching across activities.
 
-For production, use a backend or Apps Script for stronger authorization and true structural row/column insert/delete operations.
+### 🔥 Habit Tracker Mode ("Habit Tracker")
+- ✅ **Daily Tick / Checkmark Grid**: One-click status cycling (🟢 Completed / 🔴 Missed / ⏸️ Skipped / ⚪ Blank).
+- 📅 **Automatic Date Columns**: Auto-generated 1..31 days with weekdays (Mon, Tue...) and highlight on **TODAY**.
+- 📊 **Completion Dashboard**: Overall completion rate %, weekly progress breakdown, and today's status badges.
+- 🔥 **Current & Best Streaks**: Live streak algorithms calculating active consecutive days and all-time records per habit.
+- 📆 **Month Selector**: Dynamic Year & Month picker (e.g. August 2026).
+- 📝 **Habit Date Notes**: Right-click or note icon to open journal entries and reflections for specific habit dates.
+
+### 🔄 Google Sheets Sync & Local Mode
+- **Google OAuth Login**: Real-time read/write synchronization with Google Sheets API.
+- **Local / Offline Fallback**: Instant local storage caching with pre-configured demo habits and schedules.
+
+---
+
+## Configuration
+
+In `index.html`:
+- `GOOGLE_CLIENT_ID` = your Google OAuth Client ID
+- `GOOGLE_SHEET_ID` = your Google Spreadsheet ID
