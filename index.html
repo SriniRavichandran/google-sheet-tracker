@@ -1248,6 +1248,29 @@ function detectStartColIndex(headerRow) {
   return 1; // Date starts at Col B (Index 1) - Matching user's exact sheet!
 }
 
+/* Helper to expand Google Sheet grid columns dynamically when column limits are reached */
+async function appendGridColumnsIfNeeded(numColumnsToAdd = 10) {
+  if (!accessToken) return;
+  const currentSheetId = sheetMap[currentSheet] ?? 0;
+  try {
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requests: [{
+          appendDimension: {
+            sheetId: currentSheetId,
+            dimension: "COLUMNS",
+            length: numColumnsToAdd
+          }
+        }]
+      })
+    });
+  } catch (e) {
+    console.warn("appendDimension error:", e);
+  }
+}
+
 /* ================= GOOGLE AUTH & API ================= */
 function googleLogin() {
   if (CONFIG.GOOGLE_CLIENT_ID.startsWith("XXXX")) return alert("Please set GOOGLE_CLIENT_ID.");
@@ -1861,7 +1884,7 @@ async function deleteHabitRowDirect(hIdx) {
   toast(`Removed habit "${h.title}" from Google Sheet`);
 }
 
-/* Auto Next Date Feature: Auto-increment date header dynamically with Date Rollover fix */
+/* Auto Next Date Feature: Auto-increment date header with grid limit expansion and month rollover */
 async function autoIncrementNextDate() {
   if (!accessToken) return googleLogin();
   markUserEditing();
@@ -1887,6 +1910,30 @@ async function autoIncrementNextDate() {
   const dayNumStr = dayNum < 10 ? `0${dayNum}` : `${dayNum}`;
   const nextLabel = `${dayNumStr}-${monthShortStr}`;
 
+  // Check if month changed (e.g., August closed -> September created)
+  if (monthIdx !== currentMonth) {
+    currentMonth = monthIdx;
+    currentYear = nextDateObj.getFullYear();
+    document.getElementById("monthSelect").value = `${currentYear}-${currentMonth}`;
+
+    const newMonthTabName = `${MONTH_NAMES[monthIdx]} ${currentYear}`;
+    if (!availableSheets.includes(newMonthTabName)) {
+      try {
+        await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ requests: [{ addSheet: { properties: { title: newMonthTabName } } }] })
+        });
+        availableSheets.push(newMonthTabName);
+        currentSheet = newMonthTabName;
+        renderTabs();
+        toast(`Created new month sheet tab "${newMonthTabName}"!`);
+      } catch (e) {
+        console.warn("Auto new month sheet creation error:", e);
+      }
+    }
+  }
+
   const nextColIdx = (data && data.length > 0) ? data[0].length : 1;
 
   if (!data.length) data.push(["HABIT"]);
@@ -1899,6 +1946,7 @@ async function autoIncrementNextDate() {
 
   const nextColLetter = colName(nextColIdx + 1);
   const range = `'${currentSheet}'!${nextColLetter}1`;
+
   try {
     await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
       method: "PUT",
@@ -1907,7 +1955,26 @@ async function autoIncrementNextDate() {
     });
     document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
     toast(`Added date column "${nextLabel}" to Google Sheet`);
-  } catch (e) { alert(e.message); }
+  } catch (e) {
+    // If Grid limit error (400 exceeds grid limits), expand columns via batchUpdate appendDimension then retry
+    if (e.message.includes("exceeds grid limits") || e.message.includes("400")) {
+      await appendGridColumnsIfNeeded(10);
+      try {
+        await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ range, values: [[nextLabel]] })
+        });
+        document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
+        toast(`Expanded grid & added date "${nextLabel}" to Google Sheet!`);
+        return;
+      } catch (retryErr) {
+        alert("Google API Error: " + retryErr.message);
+        return;
+      }
+    }
+    alert(e.message);
+  }
 }
 
 /* Auto-Populate Full Month Dates (1 to 31) */
@@ -2357,7 +2424,22 @@ async function addDate() {
     });
     document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
     toast(`Added column "${date}" to Google Sheet`);
-  } catch (e) { alert(e.message); }
+  } catch (e) {
+    if (e.message.includes("exceeds grid limits") || e.message.includes("400")) {
+      await appendGridColumnsIfNeeded(10);
+      try {
+        await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ range, values: [[date]] })
+        });
+        document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
+        toast(`Added column "${date}" to Google Sheet`);
+        return;
+      } catch (err2) { alert(err2.message); return; }
+    }
+    alert(e.message);
+  }
 }
 
 async function addTime() {
@@ -2711,6 +2793,21 @@ async function updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, status, 
     setSync("Synced", "online");
     document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
   } catch (e) {
+    if (e.message.includes("exceeds grid limits") || e.message.includes("400")) {
+      await appendGridColumnsIfNeeded(10);
+      try {
+        await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ range, values: [[val]] })
+        });
+        setSync("Synced", "online");
+        document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
+        return;
+      } catch (retryErr) {
+        console.error("Retry single habit cell update error:", retryErr);
+      }
+    }
     setSync("Sync Error", "error");
     console.error("Habit cell update error:", e);
   }
@@ -2752,6 +2849,22 @@ async function saveFullHabitsToGoogleSheet() {
     setSync("Synced", "online");
     document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
   } catch (e) {
+    if (e.message.includes("exceeds grid limits") || e.message.includes("400")) {
+      await appendGridColumnsIfNeeded(10);
+      try {
+        const range = `'${currentSheet}'!A1`;
+        await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ range, values: rows })
+        });
+        setSync("Synced", "online");
+        document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
+        return;
+      } catch (retryErr) {
+        console.error("Retry full habits save error:", retryErr);
+      }
+    }
     setSync("Sync Error", "error");
     console.error("Save habits error:", e);
   }
