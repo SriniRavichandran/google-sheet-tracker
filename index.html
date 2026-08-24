@@ -538,7 +538,6 @@ th.th-date {
   justify-content: center;
   gap: 2px;
 }
-.th-col-ref { font-size: 9px; color: var(--cyan); font-weight: 800; letter-spacing: 0.05em; }
 .th-date-num { font-size: 13px; font-weight: 900; color: #fff; white-space: nowrap; }
 .th-date-day { font-size: 9px; color: var(--muted); text-transform: uppercase; }
 th.th-date.today {
@@ -1597,7 +1596,7 @@ function renderHabitToolbar() {
     { text: "🗑️ Delete Column", class: "danger", click: deleteColumnPrompt },
     { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet },
     { text: deleteMode ? "🗑️ Table Trash Icons: ON" : "🔒 Table Trash Icons: OFF", class: deleteMode ? "danger" : "", click: toggleDeleteMode },
-    { text: "↻ Refresh & Sync", class: "primary", click: refreshAll }
+    { text: "↻ Refresh & Sync", class: "primary", click: refreshAll, alignRight: true }
   ];
 
   btns.forEach(b => {
@@ -1605,6 +1604,7 @@ function renderHabitToolbar() {
     btn.className = `btn ${b.class}`;
     btn.textContent = b.text;
     btn.onclick = b.click;
+    if (b.alignRight) btn.style.marginLeft = "auto";
     container.appendChild(btn);
   });
 }
@@ -1623,10 +1623,10 @@ function renderHabitGrid() {
   const trHead = document.createElement("tr");
 
   const thHabit = document.createElement("th");
-  thHabit.innerHTML = `<span>HABIT (COL A)</span>`;
+  thHabit.innerHTML = `<span>HABIT</span>`;
   trHead.appendChild(thHabit);
 
-  // Dynamic Date Column Headers
+  // Dynamic Date Column Headers (Removed COL A, COL B references - Date & Day only)
   customDateCols.forEach((colInfo) => {
     const th = document.createElement("th");
     th.className = "th-date" + (colInfo.isToday ? " today" : "");
@@ -1637,7 +1637,7 @@ function renderHabitGrid() {
 
     th.innerHTML = `
       <div class="th-date-wrap">
-        <div class="th-col-ref">COL ${colInfo.colLetter} ${delColBtnHtml}</div>
+        ${delColBtnHtml ? `<div style="margin-bottom:2px;">${delColBtnHtml}</div>` : ''}
         <div class="th-date-num">${escapeHtml(colInfo.label)}</div>
         <div class="th-date-day">${colInfo.dayName || ''}</div>
       </div>
@@ -1861,23 +1861,32 @@ async function deleteHabitRowDirect(hIdx) {
   toast(`Removed habit "${h.title}" from Google Sheet`);
 }
 
-/* Auto Next Date Feature: Auto-increment date header dynamically */
+/* Auto Next Date Feature: Auto-increment date header dynamically with Date Rollover fix */
 async function autoIncrementNextDate() {
   if (!accessToken) return googleLogin();
   markUserEditing();
-  let nextDayNum = 1;
-  let monthShort = MONTH_SHORT[currentMonth];
-  let formatPattern = "DD-MMM";
 
+  let nextDateObj;
   if (customDateCols.length > 0) {
     const lastCol = customDateCols[customDateCols.length - 1];
-    nextDayNum = (lastCol.dayNum || 15) + 1;
-    if (lastCol.label.startsWith("Aug ") || lastCol.label.startsWith("Jan ") || lastCol.label.includes("-AUG")) {
-      formatPattern = "DD-MMM";
+    let d;
+    if (lastCol.dateObj && !isNaN(new Date(lastCol.dateObj).getTime())) {
+      d = new Date(lastCol.dateObj);
+    } else {
+      d = new Date(currentYear, lastCol.monthIndex !== undefined ? lastCol.monthIndex : currentMonth, lastCol.dayNum || 1);
     }
+    d.setDate(d.getDate() + 1);
+    nextDateObj = d;
+  } else {
+    nextDateObj = new Date(currentYear, currentMonth, 1);
   }
 
-  const nextLabel = formatPattern === "MMM DD" ? `${monthShort} ${nextDayNum}` : `${nextDayNum}-${monthShort.toUpperCase()}`;
+  const dayNum = nextDateObj.getDate();
+  const monthIdx = nextDateObj.getMonth();
+  const monthShortStr = MONTH_SHORT[monthIdx].toUpperCase();
+  const dayNumStr = dayNum < 10 ? `0${dayNum}` : `${dayNum}`;
+  const nextLabel = `${dayNumStr}-${monthShortStr}`;
+
   const nextColIdx = (data && data.length > 0) ? data[0].length : 1;
 
   if (!data.length) data.push(["HABIT"]);
@@ -1886,6 +1895,7 @@ async function autoIncrementNextDate() {
 
   buildDefaultCustomDateCols();
   render();
+  scrollToActiveDateColumn();
 
   const nextColLetter = colName(nextColIdx + 1);
   const range = `'${currentSheet}'!${nextColLetter}1`;
@@ -2228,7 +2238,7 @@ function renderActivityToolbar() {
     { text: "🗑️ Delete Row", class: "danger", click: deleteRowPrompt },
     { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet },
     { text: deleteMode ? "🗑️ Table Trash Icons: ON" : "🔒 Table Trash Icons: OFF", class: deleteMode ? "danger" : "", click: toggleDeleteMode },
-    { text: "↻ Refresh & Sync", class: "primary", click: refreshAll }
+    { text: "↻ Refresh & Sync", class: "primary", click: refreshAll, alignRight: true }
   ];
 
   btns.forEach(b => {
@@ -2236,6 +2246,7 @@ function renderActivityToolbar() {
     btn.className = `btn ${b.class}`;
     btn.textContent = b.text;
     btn.onclick = b.click;
+    if (b.alignRight) btn.style.marginLeft = "auto";
     container.appendChild(btn);
   });
 }
