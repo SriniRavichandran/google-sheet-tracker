@@ -7,21 +7,21 @@
 <style>
 :root {
   --bg: #060d19;
-  --panel: rgba(15, 29, 48, 0.82);
+  --panel: rgba(15, 29, 48, 0.85);
   --panel2: rgba(21, 41, 68, 0.88);
-  --line: rgba(148, 163, 184, 0.16);
+  --line: rgba(148, 163, 184, 0.18);
   --text: #e8f1ff;
   --muted: #8ea5c4;
   --blue: #39a0ff;
   --cyan: #36e0ff;
   --green: #35d399;
-  --green-glow: rgba(53, 211, 153, 0.35);
+  --green-glow: rgba(53, 211, 153, 0.4);
   --red: #ff5263;
-  --red-glow: rgba(255, 82, 99, 0.35);
+  --red-glow: rgba(255, 82, 99, 0.4);
   --yellow: #fbbf24;
   --purple: #a78bfa;
-  --today-bg: rgba(54, 224, 255, 0.12);
-  --today-border: rgba(54, 224, 255, 0.45);
+  --today-bg: rgba(54, 224, 255, 0.15);
+  --today-border: rgba(54, 224, 255, 0.5);
 }
 
 * { box-sizing: border-box; }
@@ -64,7 +64,7 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(5, 15, 28, 0.85);
+  background: rgba(5, 15, 28, 0.88);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(20px);
   position: sticky;
@@ -110,6 +110,40 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
   display: flex;
   gap: 10px;
   align-items: center;
+}
+
+/* Mode Switcher Pills */
+.mode-switcher {
+  display: flex;
+  background: rgba(5, 16, 30, 0.85);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 3px;
+}
+.mode-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 7px 14px;
+  border-radius: 9px;
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.mode-btn:hover { color: #fff; }
+.mode-btn.active {
+  background: linear-gradient(135deg, #258cff, #1762d1);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(37, 140, 255, 0.4);
+}
+.mode-btn.active.habit-mode {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
 }
 
 /* Buttons */
@@ -214,17 +248,6 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
   border-color: rgba(85, 183, 255, 0.6);
   box-shadow: 0 6px 20px rgba(39, 143, 255, 0.4);
 }
-.tab.habit-tab {
-  background: linear-gradient(135deg, rgba(53, 211, 153, 0.15), rgba(16, 185, 129, 0.1));
-  border-color: rgba(53, 211, 153, 0.4);
-  color: var(--green);
-}
-.tab.habit-tab.active {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: #fff;
-  border-color: rgba(52, 211, 153, 0.7);
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
-}
 
 /* Hero Cards */
 .hero {
@@ -303,10 +326,6 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
 .stat-header { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 .stat-value { font-size: 30px; font-weight: 900; margin-top: 10px; color: #fff; display: flex; align-items: baseline; gap: 8px; }
 .stat-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
-.stat-progress { height: 6px; border-radius: 10px; background: rgba(255,255,255,0.08); margin-top: 12px; overflow: hidden; }
-.stat-progress-bar { height: 100%; border-radius: 10px; background: linear-gradient(90deg, var(--blue), var(--cyan)); transition: width 0.6s ease; }
-.stat-progress-bar.green { background: linear-gradient(90deg, #10b981, #35d399); }
-.stat-progress-bar.purple { background: linear-gradient(90deg, #8b5cf6, #c084fc); }
 
 /* Analytics Breakdown */
 .analytics-section {
@@ -471,7 +490,7 @@ th {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  min-width: 48px;
+  min-width: 52px;
 }
 
 th:first-child, td:first-child {
@@ -536,7 +555,7 @@ th:first-child { z-index: 20; background: #0c1b2e; }
 .cell:hover .cell-clear-icon { display: inline-block; }
 .empty { color: #5a718c; font-style: italic; }
 
-/* Interactive Habit Cell */
+/* Interactive Habit Cell with Ticks */
 .habit-col-cell { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .habit-col-main { display: flex; align-items: center; gap: 10px; overflow: hidden; }
 .habit-icon {
@@ -555,12 +574,12 @@ th:first-child { z-index: 20; background: #0c1b2e; }
 .streak-chip { color: #ff9d00; font-weight: 800; display: inline-flex; align-items: center; gap: 2px; }
 
 .cell-habit {
-  width: 46px;
-  height: 46px;
-  border-radius: 10px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   margin: auto;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -568,38 +587,72 @@ th:first-child { z-index: 20; background: #0c1b2e; }
   background: rgba(255, 255, 255, 0.03);
   user-select: none;
 }
-.cell-habit:hover { transform: scale(1.1); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4); z-index: 5; }
-
-.cell-habit.done {
-  background: rgba(53, 211, 153, 0.2);
-  border: 1px solid rgba(53, 211, 153, 0.5);
-  box-shadow: inset 0 0 12px var(--green-glow);
+.cell-habit:hover {
+  transform: scale(1.15);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+  z-index: 10;
 }
-.cell-habit.done::after { content: "✓"; font-size: 20px; font-weight: 900; color: var(--green); text-shadow: 0 0 8px var(--green-glow); }
+
+/* Status States for Cells */
+.cell-habit.done {
+  background: rgba(53, 211, 153, 0.22);
+  border: 2px solid rgba(53, 211, 153, 0.65);
+  box-shadow: 0 0 15px var(--green-glow), inset 0 0 10px var(--green-glow);
+}
+.cell-habit.done::after {
+  content: "✓";
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--green);
+  text-shadow: 0 0 10px var(--green);
+}
 
 .cell-habit.missed {
-  background: rgba(255, 82, 99, 0.2);
-  border: 1px solid rgba(255, 82, 99, 0.5);
-  box-shadow: inset 0 0 12px var(--red-glow);
+  background: rgba(255, 82, 99, 0.22);
+  border: 2px solid rgba(255, 82, 99, 0.65);
+  box-shadow: 0 0 15px var(--red-glow), inset 0 0 10px var(--red-glow);
 }
-.cell-habit.missed::after { content: "✕"; font-size: 18px; font-weight: 900; color: var(--red); }
+.cell-habit.missed::after {
+  content: "✕";
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--red);
+  text-shadow: 0 0 10px var(--red);
+}
 
-.cell-habit.skip { background: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.4); }
-.cell-habit.skip::after { content: "⏸"; font-size: 14px; color: var(--yellow); }
+.cell-habit.skip {
+  background: rgba(251, 191, 36, 0.18);
+  border: 1px solid rgba(251, 191, 36, 0.5);
+}
+.cell-habit.skip::after {
+  content: "⏸";
+  font-size: 15px;
+  color: var(--yellow);
+}
 
-.cell-habit.pending { border: 1px dashed rgba(148, 163, 184, 0.25); }
-.cell-habit.pending:hover { border-color: rgba(54, 224, 255, 0.5); background: rgba(54, 224, 255, 0.08); }
-.cell-habit.pending::after { content: "•"; color: rgba(148, 163, 184, 0.4); font-size: 16px; }
+.cell-habit.pending {
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+}
+.cell-habit.pending:hover {
+  border-color: rgba(54, 224, 255, 0.6);
+  background: rgba(54, 224, 255, 0.1);
+}
+.cell-habit.pending::after {
+  content: "+";
+  color: rgba(148, 163, 184, 0.4);
+  font-size: 18px;
+  font-weight: 700;
+}
 
 .note-dot {
   position: absolute;
   top: 3px;
   right: 3px;
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--cyan);
-  box-shadow: 0 0 6px var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
 }
 
 .del-mini-btn {
@@ -665,9 +718,9 @@ th:first-child { z-index: 20; background: #0c1b2e; }
   transition: 0.2s;
 }
 .status-opt:hover { border-color: rgba(54, 224, 255, 0.4); }
-.status-opt.active[data-val="DONE"] { background: rgba(53, 211, 153, 0.2); border-color: var(--green); color: var(--green); }
-.status-opt.active[data-val="MISSED"] { background: rgba(255, 82, 99, 0.2); border-color: var(--red); color: var(--red); }
-.status-opt.active[data-val="SKIP"] { background: rgba(251, 191, 36, 0.2); border-color: var(--yellow); color: var(--yellow); }
+.status-opt.active[data-val="DONE"] { background: rgba(53, 211, 153, 0.25); border-color: var(--green); color: var(--green); }
+.status-opt.active[data-val="MISSED"] { background: rgba(255, 82, 99, 0.25); border-color: var(--red); color: var(--red); }
+.status-opt.active[data-val="SKIP"] { background: rgba(251, 191, 36, 0.25); border-color: var(--yellow); color: var(--yellow); }
 .status-opt.active[data-val="PENDING"] { background: rgba(255, 255, 255, 0.1); border-color: #fff; }
 
 .modal-actions {
@@ -714,9 +767,16 @@ th:first-child { z-index: 20; background: #0c1b2e; }
   </div>
 
   <div class="top-actions">
-    <select id="monthSelect" class="month-picker" onchange="onMonthChange()" style="display:none">
+    <!-- View Mode Switcher -->
+    <div class="mode-switcher">
+      <button id="btnViewHabit" class="mode-btn active habit-mode" onclick="setViewMode('habit')">🔥 Habit Tracker (Ticks)</button>
+      <button id="btnViewActivity" class="mode-btn" onclick="setViewMode('activity')">📋 Schedule / Activity</button>
+    </div>
+
+    <select id="monthSelect" class="month-picker" onchange="onMonthChange()">
       <!-- Month Options -->
     </select>
+
     <button id="loginBtn" class="btn" onclick="googleLogin()">
       <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.761H12.545z"/></svg>
       Sign in with Google
@@ -731,11 +791,7 @@ th:first-child { z-index: 20; background: #0c1b2e; }
 
   <!-- Sheet Tabs Bar -->
   <div class="tabs" id="sheetTabs">
-    <button class="btn tab active" data-sheet="Daily Activity Planner" onclick="switchSheetTab('Daily Activity Planner')">Daily Activity Planner</button>
-    <button class="btn tab" data-sheet="Daily Focus" onclick="switchSheetTab('Daily Focus')">Daily Focus</button>
-    <button class="btn tab" data-sheet="Manage Conflict" onclick="switchSheetTab('Manage Conflict')">Manage Conflict</button>
-    <button class="btn tab habit-tab" data-sheet="Habit Tracker" onclick="switchSheetTab('Habit Tracker')">🔥 Habit Tracker</button>
-    <button class="btn" style="border-style:dashed;color:var(--cyan)" onclick="addNewSheet()">＋ Add Sheet</button>
+    <!-- Tabs populated dynamically -->
   </div>
 
   <!-- Hero Section -->
@@ -743,15 +799,15 @@ th:first-child { z-index: 20; background: #0c1b2e; }
     <div class="hero-card">
       <div>
         <div class="hero-title">
-          <h2 id="heroTitle">Daily Activity Planner Workspace</h2>
-          <span style="background:rgba(54,224,255,0.15);color:var(--cyan);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:800;" id="heroTabType">Activity Mode</span>
+          <h2 id="heroTitle">Habit Tracker Workspace</h2>
+          <span style="background:rgba(53,211,153,0.18);color:var(--green);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:800;" id="heroTabType">🔥 Habit Checkmark Mode</span>
         </div>
         <p class="hero-subtitle" id="heroDesc">
-          Manage your daily activities directly from a modern 3D workspace. Changes are synchronized in real-time with Google Sheets.
+          Track daily checkmarks, build consistency streaks, analyze weekly & monthly progress, and add date notes. Synchronized in real-time with Google Sheets.
         </p>
       </div>
       <div style="display:flex;gap:12px;margin-top:16px;" id="heroActionBtns">
-        <!-- Action Buttons depending on sheet type -->
+        <!-- Dynamic Action Buttons -->
       </div>
     </div>
 
@@ -759,8 +815,8 @@ th:first-child { z-index: 20; background: #0c1b2e; }
     <div class="sync-card">
       <div>
         <div class="sync-title">
-          <span id="syncCardHeading">Sync Status</span>
-          <span id="overallPctBadge" style="color:var(--green);font-size:20px;font-weight:900;display:none">0%</span>
+          <span id="syncCardHeading">Overall Consistency</span>
+          <span id="overallPctBadge" style="color:var(--green);font-size:24px;font-weight:900;">0%</span>
         </div>
         <div class="sync-time">Last Synced: <span id="lastSync">—</span></div>
       </div>
@@ -770,35 +826,35 @@ th:first-child { z-index: 20; background: #0c1b2e; }
     </div>
   </section>
 
-  <!-- Key Metrics Row (Activity Mode vs Habit Mode) -->
+  <!-- Key Metrics Row -->
   <section class="stats-grid" id="statsGrid">
-    <div class="stat-card">
-      <div class="stat-header"><span>Current Sheet</span> 📄</div>
-      <div class="stat-value"><span id="stat1Val" style="font-size:22px">Daily Activity</span></div>
-      <div class="stat-sub" id="stat1Sub">Active Sheet Tab</div>
+    <div class="stat-card green">
+      <div class="stat-header"><span id="stat1Label">Completion Rate</span> 📊</div>
+      <div class="stat-value"><span id="stat1Val">0%</span></div>
+      <div class="stat-sub" id="stat1Sub">0 Completed Days</div>
     </div>
 
-    <div class="stat-card green">
-      <div class="stat-header"><span id="stat2Label">Time Slots</span> ⏰</div>
-      <div class="stat-value"><span id="stat2Val">0</span></div>
-      <div class="stat-sub" id="stat2Sub">Rows configured</div>
+    <div class="stat-card">
+      <div class="stat-header"><span id="stat2Label">Current Streak</span> 🔥</div>
+      <div class="stat-value"><span id="stat2Val">0d</span></div>
+      <div class="stat-sub" id="stat2Sub">Leader: —</div>
     </div>
 
     <div class="stat-card yellow">
-      <div class="stat-header"><span id="stat3Label">Dates / Columns</span> 📅</div>
+      <div class="stat-header"><span id="stat3Label">Active Habits</span> 🎯</div>
       <div class="stat-value"><span id="stat3Val">0</span></div>
-      <div class="stat-sub" id="stat3Sub">Columns configured</div>
+      <div class="stat-sub" id="stat3Sub">Tracking targets</div>
     </div>
 
     <div class="stat-card purple">
-      <div class="stat-header"><span id="stat4Label">Filled Entries</span> 📝</div>
-      <div class="stat-value"><span id="stat4Val">0</span></div>
-      <div class="stat-sub" id="stat4Sub">Activities logged</div>
+      <div class="stat-header"><span id="stat4Label">Best Record</span> 🏆</div>
+      <div class="stat-value"><span id="stat4Val">0d</span></div>
+      <div class="stat-sub" id="stat4Sub">Record Holder: —</div>
     </div>
   </section>
 
-  <!-- Analytics Section (Only for Habit Tracker mode) -->
-  <section id="analyticsSection" class="analytics-section" style="display:none">
+  <!-- Analytics Section (Habit mode) -->
+  <section id="analyticsSection" class="analytics-section">
     <div class="panel analytics-card">
       <div class="analytics-title">
         <span>📈 Weekly Progress Breakdown</span>
@@ -822,15 +878,15 @@ th:first-child { z-index: 20; background: #0c1b2e; }
 
   <!-- Toolbar Controls -->
   <div class="toolbar" id="toolbarContainer">
-    <input id="search" class="input search" placeholder="Search..." oninput="render()">
-    <!-- Dynamic Buttons appended by renderToolbar() -->
+    <input id="search" class="input search" placeholder="Search habits or notes..." oninput="render()">
+    <!-- Dynamic Buttons -->
   </div>
 
   <!-- Main Grid Panel -->
   <section class="panel">
     <div class="panel-head">
-      <h3 id="panelHeadTitle">Daily Activity Planner</h3>
-      <span id="panelHeadHint">Click cell to edit activity • Double-click date to rename</span>
+      <h3 id="panelHeadTitle">Daily Habit Tracker</h3>
+      <span id="panelHeadHint">Click cell to tick: 🟢 Done (✓) ➜ 🔴 Missed (✕) ➜ ⏸️ Skipped ➜ ⚪ Blank | Right-click for Note</span>
     </div>
     <div class="table-wrap">
       <table id="grid"></table>
@@ -838,13 +894,13 @@ th:first-child { z-index: 20; background: #0c1b2e; }
   </section>
 </main>
 
-<!-- Activity Edit Modal (For Activity Sheets) -->
+<!-- Activity Edit Modal (Activity View) -->
 <div class="modal-bg" id="modalBg">
   <div class="modal">
     <h2>Update Activity</h2>
-    <div class="field"><label>TIME</label><input id="mTime" class="input" readonly></div>
-    <div class="field"><label>DATE</label><input id="mDate" class="input" readonly></div>
-    <div class="field"><label>ACTIVITY</label><textarea id="mValue" class="input" placeholder="Enter your activity details..."></textarea></div>
+    <div class="field"><label>TIME / ROW</label><input id="mTime" class="input" readonly></div>
+    <div class="field"><label>DATE / COL</label><input id="mDate" class="input" readonly></div>
+    <div class="field"><label>ACTIVITY</label><textarea id="mValue" class="input" placeholder="Enter activity details..."></textarea></div>
     <div class="modal-actions">
       <div class="modal-btn-group">
         <button class="btn danger" onclick="modalClearCell()">🧹 Clear Cell</button>
@@ -858,7 +914,7 @@ th:first-child { z-index: 20; background: #0c1b2e; }
   </div>
 </div>
 
-<!-- Habit Add / Edit Modal (For Habit Tracker) -->
+<!-- Habit Add / Edit Modal -->
 <div class="modal-bg" id="habitModalBg">
   <div class="modal">
     <h2 id="habitModalTitle">＋ Add New Habit</h2>
@@ -896,7 +952,7 @@ th:first-child { z-index: 20; background: #0c1b2e; }
 <!-- Habit Cell Entry & Note Modal -->
 <div class="modal-bg" id="noteModalBg">
   <div class="modal">
-    <h2>📝 Habit Entry & Note</h2>
+    <h2>📝 Habit Status & Note</h2>
     <div class="field">
       <label>Habit</label>
       <input id="nHabitName" class="input" readonly style="font-weight:700;color:var(--cyan)">
@@ -908,8 +964,8 @@ th:first-child { z-index: 20; background: #0c1b2e; }
     <div class="field">
       <label>Status</label>
       <div class="status-picker">
-        <div class="status-opt" data-val="DONE" onclick="setNoteStatus('DONE')">🟢 Completed</div>
-        <div class="status-opt" data-val="MISSED" onclick="setNoteStatus('MISSED')">🔴 Missed</div>
+        <div class="status-opt" data-val="DONE" onclick="setNoteStatus('DONE')">🟢 Completed (✓)</div>
+        <div class="status-opt" data-val="MISSED" onclick="setNoteStatus('MISSED')">🔴 Missed (✕)</div>
         <div class="status-opt" data-val="SKIP" onclick="setNoteStatus('SKIP')">⏸️ Skipped</div>
         <div class="status-opt" data-val="PENDING" onclick="setNoteStatus('PENDING')">⚪ Blank</div>
       </div>
@@ -930,7 +986,7 @@ th:first-child { z-index: 20; background: #0c1b2e; }
 
 <div class="toast" id="toast"></div>
 
-<!-- Google OAuth Client -->
+<!-- Google OAuth Client SDK -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <script>
@@ -946,10 +1002,12 @@ let accessToken = null;
 let currentSheet = CONFIG.SHEET_NAME;
 let availableSheets = ["Daily Activity Planner", "Daily Focus", "Manage Conflict", "Habit Tracker"];
 let sheetMap = {};
-let data = []; // Standard activity grid matrix
-let habits = []; // Habit Tracker entries array
-let selected = null; // Standard activity cell selected {row, col}
-let selectedHabitCell = null; // Habit cell selected {habitIndex, day}
+
+let viewMode = "habit"; // 'habit' or 'activity'
+let data = []; // Activity matrix
+let habits = []; // Habit list
+let selected = null; // Activity cell {row, col}
+let selectedHabitCell = null; // Habit cell {habitIndex, day}
 let editingHabitIndex = null;
 
 let currentYear = 2026;
@@ -960,41 +1018,41 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December"
 ];
 
-/* Default Demo Habits for Habit Tracker Sheet */
+/* Default Demo Habits */
 const DEFAULT_HABITS = [
   { id: "h1", title: "Morning Workout 🏋️", icon: "🏋️", target: "Daily", entries: {
-    "1": {status: "DONE", note: "Upper body strength session"},
-    "2": {status: "DONE", note: "5km morning run"},
-    "3": {status: "DONE", note: "HIIT cardio"},
+    "1": {status: "DONE", note: "Upper body session"},
+    "2": {status: "DONE", note: "5km run"},
+    "3": {status: "DONE", note: "HIIT workout"},
     "4": {status: "MISSED", note: "Rest day"},
-    "5": {status: "DONE", note: "Yoga & stretching"},
-    "6": {status: "DONE", note: "Leg workout"},
-    "7": {status: "DONE", note: "Core workout"}
+    "5": {status: "DONE", note: "Yoga"},
+    "6": {status: "DONE", note: "Legs workout"},
+    "7": {status: "DONE", note: "Core focus"}
   }},
   { id: "h2", title: "Read 20 Pages 📚", icon: "📚", target: "Daily", entries: {
-    "1": {status: "DONE", note: "Atomic Habits Ch 4"},
-    "2": {status: "DONE", note: "Atomic Habits Ch 5"},
-    "3": {status: "DONE", note: "Finished Ch 6"},
+    "1": {status: "DONE", note: "Ch 4 Atomic Habits"},
+    "2": {status: "DONE", note: "Ch 5 Atomic Habits"},
+    "3": {status: "DONE", note: "Ch 6"},
     "4": {status: "DONE", note: "Read 30 mins"},
     "5": {status: "MISSED", note: "Busy schedule"},
-    "6": {status: "DONE", note: "Read Ch 7"},
-    "7": {status: "DONE", note: "Read Ch 8"}
+    "6": {status: "DONE", note: "Ch 7"},
+    "7": {status: "DONE", note: "Ch 8"}
   }},
   { id: "h3", title: "Meditation 🧘", icon: "🧘", target: "Daily", entries: {
     "1": {status: "DONE", note: "10 min breathwork"},
     "2": {status: "DONE", note: "15 min mindfulness"},
-    "3": {status: "DONE", note: "Evening relaxation"},
+    "3": {status: "DONE", note: "Relaxation"},
     "4": {status: "DONE", note: "10 mins"},
     "5": {status: "DONE", note: "10 mins"},
     "6": {status: "MISSED", note: "Skipped morning"},
-    "7": {status: "DONE", note: "Guided reset"}
+    "7": {status: "DONE", note: "Reset session"}
   }},
   { id: "h4", title: "Code & Build Projects 💻", icon: "💻", target: "6x / week", entries: {
-    "1": {status: "DONE", note: "Built 3D Habit feature"},
-    "2": {status: "DONE", note: "Added streaks logic"},
+    "1": {status: "DONE", note: "Built Habit Features"},
+    "2": {status: "DONE", note: "Added Streaks logic"},
     "3": {status: "DONE", note: "Google API sync"},
-    "4": {status: "DONE", note: "Refactored codebase"},
-    "5": {status: "DONE", note: "Dashboard analytics"},
+    "4": {status: "DONE", note: "Refactored UI"},
+    "5": {status: "DONE", note: "Dashboard charts"},
     "6": {status: "DONE", note: "UI polish"},
     "7": {status: "SKIP", note: "Weekend break"}
   }},
@@ -1009,7 +1067,7 @@ const DEFAULT_HABITS = [
   }}
 ];
 
-/* Default Activity Data for Standard Activity Sheets */
+/* Default Activity Schedule Data */
 const INITIAL_ACTIVITY_DATA = {
   "Daily Activity Planner": [
     ["TIME", "18-Aug", "19-Aug", "20-Aug", "21-Aug", "22-Aug", "23-Aug", "24-Aug"],
@@ -1030,11 +1088,6 @@ const INITIAL_ACTIVITY_DATA = {
   ]
 };
 
-/* Helper: Is current sheet a Habit Tracker sheet? */
-function isHabitSheet() {
-  return currentSheet.toLowerCase().includes("habit");
-}
-
 /* ================= INIT ================= */
 window.addEventListener("DOMContentLoaded", () => {
   initMonthPicker();
@@ -1042,6 +1095,13 @@ window.addEventListener("DOMContentLoaded", () => {
   renderTabs();
   render();
 });
+
+function setViewMode(mode) {
+  viewMode = mode;
+  document.getElementById("btnViewHabit").className = `mode-btn ${mode === 'habit' ? 'active habit-mode' : ''}`;
+  document.getElementById("btnViewActivity").className = `mode-btn ${mode === 'activity' ? 'active' : ''}`;
+  render();
+}
 
 function initMonthPicker() {
   const select = document.getElementById("monthSelect");
@@ -1061,7 +1121,7 @@ function getDaysInCurrentMonth() {
 
 /* ================= GOOGLE AUTH & API ================= */
 function googleLogin() {
-  if (CONFIG.GOOGLE_CLIENT_ID.startsWith("XXXX")) return alert("Please set your GOOGLE_CLIENT_ID.");
+  if (CONFIG.GOOGLE_CLIENT_ID.startsWith("XXXX")) return alert("Please set GOOGLE_CLIENT_ID.");
   const client = google.accounts.oauth2.initTokenClient({
     client_id: CONFIG.GOOGLE_CLIENT_ID,
     scope: CONFIG.SCOPES,
@@ -1087,7 +1147,7 @@ function googleLogout() {
   document.getElementById("logoutBtn").style.display = "none";
   setSync("Local Mode", "offline");
   document.getElementById("lastSync").textContent = "—";
-  toast("Signed out. Using local workspace.");
+  toast("Signed out. Using local storage.");
   render();
 }
 
@@ -1109,7 +1169,6 @@ async function fetchSheetTabs() {
         sheetMap[s.properties.title] = s.properties.sheetId;
         return s.properties.title;
       });
-      // Merge with default list
       fetched.forEach(t => { if (!availableSheets.includes(t)) availableSheets.push(t); });
       renderTabs();
     }
@@ -1124,38 +1183,40 @@ async function loadSheet() {
     const res = await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}`);
     const rawValues = res.values || [];
 
-    if (isHabitSheet()) {
-      if (rawValues.length > 1) {
-        habits = [];
-        const numDays = getDaysInCurrentMonth();
-        for (let r = 1; r < rawValues.length; r++) {
-          const row = rawValues[r];
-          if (!row || !row[0]) continue;
-          const habitTitle = row[0] || "Habit";
-          const habitTarget = row[1] || "Daily";
-          const icon = habitTitle.match(/(\p{Extended_Pictographic})/u)?.[0] || "🎯";
-          const entries = {};
-          for (let d = 1; d <= numDays; d++) {
-            const parsed = parseHabitCell(row[d + 1] || "");
-            if (parsed.status !== "PENDING" || parsed.note) entries[d] = parsed;
-          }
-          habits.push({ id: "h_" + r + "_" + Date.now(), title: habitTitle, icon, target: habitTarget, entries });
+    if (rawValues.length > 0) {
+      // 1. Load Activity Matrix
+      let maxCols = Math.max(...rawValues.map(row => row.length));
+      data = rawValues.map(row => {
+        const copy = [...row];
+        while (copy.length < maxCols) copy.push("");
+        return copy;
+      });
+
+      // 2. Parse Habits from Sheet Rows
+      habits = [];
+      const numDays = getDaysInCurrentMonth();
+      for (let r = 1; r < rawValues.length; r++) {
+        const row = rawValues[r];
+        if (!row || !row[0]) continue;
+        const habitTitle = row[0] || "Habit";
+        const habitTarget = row[1] || "Daily";
+        const icon = habitTitle.match(/(\p{Extended_Pictographic})/u)?.[0] || "🎯";
+        const entries = {};
+
+        // Auto-detect whether Col 1 is Target or Day 1
+        const startColIndex = (row[1] && (row[1].includes("/") || row[1].toLowerCase().includes("daily") || row[1].toLowerCase().includes("week"))) ? 2 : 1;
+
+        for (let d = 1; d <= numDays; d++) {
+          const rawCell = row[d - 1 + startColIndex] || "";
+          const parsed = parseHabitCell(rawCell);
+          if (parsed.status !== "PENDING" || parsed.note) entries[d] = parsed;
         }
-      } else {
-        habits = JSON.parse(JSON.stringify(DEFAULT_HABITS));
-      }
-    } else {
-      if (rawValues.length) {
-        let maxCols = Math.max(...rawValues.map(row => row.length));
-        data = rawValues.map(row => {
-          const copy = [...row];
-          while (copy.length < maxCols) copy.push("");
-          return copy;
-        });
-      } else {
-        data = INITIAL_ACTIVITY_DATA[currentSheet] || [["TIME", "18-Aug", "19-Aug"], ["9-10 AM", "", ""]];
+        habits.push({ id: "h_" + r + "_" + Date.now(), title: habitTitle, icon, target: habitTarget, entries });
       }
     }
+
+    if (!habits.length) habits = JSON.parse(JSON.stringify(DEFAULT_HABITS));
+    if (!data.length) data = INITIAL_ACTIVITY_DATA[currentSheet] || [["TIME", "18-Aug", "19-Aug"], ["9-10 AM", "", ""]];
 
     saveLocalState();
     render();
@@ -1173,49 +1234,44 @@ async function refreshAll() {
   toast("Refreshed");
 }
 
-/* Polling every 30 seconds if authenticated */
 setInterval(() => { if (accessToken) loadSheet(); }, 30000);
 
 /* ================= LOCAL STORAGE ================= */
-function getStorageKey() {
-  return `4iapps_${currentSheet.replace(/\s+/g, "_")}`;
+function getStorageKey(type = "data") {
+  return `4iapps_${type}_${currentSheet.replace(/\s+/g, "_")}`;
 }
 
 function loadLocalState() {
-  const saved = localStorage.getItem(getStorageKey());
-  if (isHabitSheet()) {
-    if (saved) {
-      try { habits = JSON.parse(saved); } catch(e){ habits = JSON.parse(JSON.stringify(DEFAULT_HABITS)); }
-    } else {
-      habits = JSON.parse(JSON.stringify(DEFAULT_HABITS));
-    }
+  const savedData = localStorage.getItem(getStorageKey("data"));
+  const savedHabits = localStorage.getItem(getStorageKey("habits"));
+
+  if (savedData) {
+    try { data = JSON.parse(savedData); } catch(e){ data = INITIAL_ACTIVITY_DATA[currentSheet] || [["TIME", "18-Aug", "19-Aug"], ["9-10 AM", "", ""]]; }
   } else {
-    if (saved) {
-      try { data = JSON.parse(saved); } catch(e){ data = INITIAL_ACTIVITY_DATA[currentSheet] || [["TIME", "18-Aug", "19-Aug"], ["9-10 AM", "", ""]]; }
-    } else {
-      data = INITIAL_ACTIVITY_DATA[currentSheet] || [["TIME", "18-Aug", "19-Aug"], ["9-10 AM", "", ""]];
-    }
+    data = INITIAL_ACTIVITY_DATA[currentSheet] || [["TIME", "18-Aug", "19-Aug"], ["9-10 AM", "", ""]];
+  }
+
+  if (savedHabits) {
+    try { habits = JSON.parse(savedHabits); } catch(e){ habits = JSON.parse(JSON.stringify(DEFAULT_HABITS)); }
+  } else {
+    habits = JSON.parse(JSON.stringify(DEFAULT_HABITS));
   }
 }
 
 function saveLocalState() {
-  if (isHabitSheet()) {
-    localStorage.setItem(getStorageKey(), JSON.stringify(habits));
-  } else {
-    localStorage.setItem(getStorageKey(), JSON.stringify(data));
-  }
+  localStorage.setItem(getStorageKey("data"), JSON.stringify(data));
+  localStorage.setItem(getStorageKey("habits"), JSON.stringify(habits));
 }
 
-/* ================= TABS NAVIGATION ================= */
+/* ================= TABS ================= */
 function renderTabs() {
   const container = document.getElementById("sheetTabs");
   container.innerHTML = "";
 
   availableSheets.forEach(name => {
     const btn = document.createElement("button");
-    const isHab = name.toLowerCase().includes("habit");
-    btn.className = `btn tab ${isHab ? 'habit-tab' : ''} ${name === currentSheet ? 'active' : ''}`;
-    btn.textContent = isHab ? `🔥 ${name}` : name;
+    btn.className = `btn tab ${name === currentSheet ? 'active' : ''}`;
+    btn.textContent = name;
     btn.onclick = () => switchSheetTab(name);
     container.appendChild(btn);
   });
@@ -1245,7 +1301,7 @@ function render() {
   const monthPicker = document.getElementById("monthSelect");
   const analyticsSec = document.getElementById("analyticsSection");
 
-  if (isHabitSheet()) {
+  if (viewMode === "habit") {
     monthPicker.style.display = "inline-block";
     analyticsSec.style.display = "grid";
     renderHabitWorkspace();
@@ -1256,175 +1312,12 @@ function render() {
   }
 }
 
-/* ================= 1. STANDARD ACTIVITY WORKSPACE RENDERER ================= */
-function renderActivityWorkspace() {
-  document.getElementById("heroTitle").textContent = `${currentSheet} Workspace`;
-  document.getElementById("heroTabType").textContent = "Activity Planner Mode";
-  document.getElementById("heroDesc").textContent = "Manage your daily schedules, tasks, and time-slot activities. All edits sync directly with Google Sheets.";
-
-  const heroBtns = document.getElementById("heroActionBtns");
-  heroBtns.innerHTML = `
-    <button class="btn success" onclick="addTime()">＋ Add Time Row</button>
-    <button class="btn primary" onclick="addDate()">＋ Add Date Column</button>
-  `;
-
-  document.getElementById("syncCardHeading").textContent = "Sheet Overview";
-  document.getElementById("overallPctBadge").style.display = "none";
-
-  // Render Activity Stats
-  let filled = 0;
-  if (data.length > 1) {
-    data.slice(1).forEach(r => r.slice(1).forEach(v => { if (v && v.trim()) filled++; }));
-  }
-  document.getElementById("stat1Val").textContent = currentSheet;
-  document.getElementById("stat1Sub").textContent = "Current Sheet Tab";
-
-  document.getElementById("stat2Label").textContent = "Time Slots";
-  document.getElementById("stat2Val").textContent = Math.max(0, data.length - 1);
-  document.getElementById("stat2Sub").textContent = "Rows configured";
-
-  document.getElementById("stat3Label").textContent = "Dates / Columns";
-  document.getElementById("stat3Val").textContent = Math.max(0, (data[0]?.length || 1) - 1);
-  document.getElementById("stat3Sub").textContent = "Columns configured";
-
-  document.getElementById("stat4Label").textContent = "Filled Activities";
-  document.getElementById("stat4Val").textContent = filled;
-  document.getElementById("stat4Sub").textContent = "Logged entries";
-
-  // Render Toolbar
-  renderActivityToolbar();
-
-  // Render Grid
-  const grid = document.getElementById("grid");
-  grid.innerHTML = "";
-  document.getElementById("panelHeadTitle").textContent = currentSheet;
-  document.getElementById("panelHeadHint").textContent = "Click cell to update activity • Double-click date header to rename";
-
-  if (!data.length) {
-    grid.innerHTML = '<tr><td style="padding:25px;text-align:center;color:var(--muted)">No data in this sheet. Click <b>＋ Add Column</b> or <b>＋ Add Row</b> to start.</td></tr>';
-    return;
-  }
-
-  const q = document.getElementById("search").value.toLowerCase();
-  const thead = document.createElement("thead");
-  const head = document.createElement("tr");
-
-  data[0].forEach((v, c) => {
-    const th = document.createElement("th");
-    const div = document.createElement("div");
-    div.className = "th-content";
-
-    const label = document.createElement("span");
-    label.textContent = v || (c === 0 ? "TIME" : `Column ${c + 1}`);
-    div.appendChild(label);
-
-    if (c > 0) {
-      th.title = "Double-click to rename";
-      th.ondblclick = () => renameDate(c + 1);
-
-      const delBtn = document.createElement("button");
-      delBtn.className = "del-mini-btn";
-      delBtn.textContent = "✕";
-      delBtn.title = "Delete column";
-      delBtn.onclick = (e) => {
-        e.stopPropagation();
-        deleteColumn(c + 1, v || `Column ${c + 1}`);
-      };
-      div.appendChild(delBtn);
-    }
-    th.appendChild(div);
-    head.appendChild(th);
-  });
-  thead.appendChild(head);
-  grid.appendChild(thead);
-
-  const body = document.createElement("tbody");
-  data.slice(1).forEach((row, i) => {
-    if (q && !row.join(" ").toLowerCase().includes(q)) return;
-    const tr = document.createElement("tr");
-    for (let c = 0; c < data[0].length; c++) {
-      const td = document.createElement("td");
-      if (c === 0) {
-        td.style.fontWeight = "700";
-        const div = document.createElement("div");
-        div.className = "row-head-content";
-        const label = document.createElement("span");
-        label.textContent = row[0] || "";
-        div.appendChild(label);
-
-        const delBtn = document.createElement("button");
-        delBtn.className = "del-mini-btn";
-        delBtn.textContent = "✕";
-        delBtn.title = "Delete row";
-        delBtn.onclick = (e) => {
-          e.stopPropagation();
-          deleteRow(i + 2, row[0] || `Row ${i + 2}`);
-        };
-        div.appendChild(delBtn);
-        td.appendChild(div);
-      } else {
-        const div = document.createElement("div");
-        div.className = "cell";
-        const v = row[c] || "";
-
-        const textSpan = document.createElement("span");
-        textSpan.className = "cell-text";
-        textSpan.innerHTML = v ? escapeHtml(v) : '<span class="empty">Click to update</span>';
-        div.appendChild(textSpan);
-
-        if (v && v.trim()) {
-          const clrBtn = document.createElement("span");
-          clrBtn.className = "cell-clear-icon";
-          clrBtn.textContent = "✕ Clear";
-          clrBtn.title = "Clear this cell";
-          clrBtn.onclick = (e) => {
-            e.stopPropagation();
-            clearCellDirect(i + 2, c + 1);
-          };
-          div.appendChild(clrBtn);
-        }
-
-        div.onclick = () => openEditor(i + 2, c + 1, row[0] || "", data[0][c] || "", v);
-        td.appendChild(div);
-      }
-      tr.appendChild(td);
-    }
-    body.appendChild(tr);
-  });
-  grid.appendChild(body);
-}
-
-function renderActivityToolbar() {
-  const container = document.getElementById("toolbarContainer");
-  const searchInput = document.getElementById("search");
-  container.innerHTML = "";
-  container.appendChild(searchInput);
-
-  const btns = [
-    { text: "＋ Add Column", class: "", click: addDate },
-    { text: "＋ Add Row", class: "", click: addTime },
-    { text: "🧹 Clear Cell", class: "danger", click: clearSelected },
-    { text: "🗑️ Delete Column", class: "danger", click: deleteColumnPrompt },
-    { text: "🗑️ Delete Row", class: "danger", click: deleteRowPrompt },
-    { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet },
-    { text: "↻ Refresh", class: "primary", click: refreshAll }
-  ];
-
-  btns.forEach(b => {
-    const btn = document.createElement("button");
-    btn.className = `btn ${b.class}`;
-    btn.textContent = b.text;
-    btn.onclick = b.click;
-    container.appendChild(btn);
-  });
-}
-
-/* ================= 2. HABIT TRACKER WORKSPACE RENDERER ================= */
+/* ================= HABIT WORKSPACE RENDERER ================= */
 function renderHabitWorkspace() {
   const monthTitle = `${MONTH_NAMES[currentMonth]} ${currentYear}`;
-  document.getElementById("heroTitle").textContent = `${monthTitle} Habit Tracker`;
-  document.getElementById("heroTabType").textContent = "Habit Tracker Mode";
-  document.getElementById("heroDesc").textContent = "Track daily checkmarks, build consistency streaks, analyze weekly & monthly progress, and add date notes. Synchronized with Google Sheets.";
+  document.getElementById("heroTitle").textContent = `${currentSheet} - Habit Tracker`;
+  document.getElementById("heroTabType").textContent = "🔥 Habit Checkmark & Status Mode";
+  document.getElementById("heroDesc").textContent = "Track daily checkmarks, build consistency streaks, analyze weekly & monthly progress, and add date notes. Synchronized in real-time with Google Sheets.";
 
   const heroBtns = document.getElementById("heroActionBtns");
   heroBtns.innerHTML = `
@@ -1463,8 +1356,9 @@ function renderHabitWorkspace() {
   const overallPct = totalPossible ? Math.round((totalDone / totalPossible) * 100) : 0;
   document.getElementById("overallPctBadge").textContent = `${overallPct}%`;
 
+  document.getElementById("stat1Label").textContent = "Completion Rate";
   document.getElementById("stat1Val").textContent = `${overallPct}%`;
-  document.getElementById("stat1Sub").textContent = `${totalDone} Done / ${totalMissed} Missed`;
+  document.getElementById("stat1Sub").textContent = `${totalDone} 🟢 Done / ${totalMissed} 🔴 Missed`;
 
   document.getElementById("stat2Label").textContent = "Current Streak";
   document.getElementById("stat2Val").textContent = `${longestStreak}d`;
@@ -1476,15 +1370,11 @@ function renderHabitWorkspace() {
 
   document.getElementById("stat4Label").textContent = "Best Record";
   document.getElementById("stat4Val").textContent = `${bestRecord}d`;
-  document.getElementById("stat4Sub").textContent = `Record: ${recordHolder}`;
+  document.getElementById("stat4Sub").textContent = `Record Holder: ${recordHolder}`;
 
   renderWeeklyBreakdown();
   renderHabitStatusList();
-
-  // Render Toolbar for Habit Mode
   renderHabitToolbar();
-
-  // Render Habit Grid
   renderHabitGrid();
 }
 
@@ -1496,7 +1386,6 @@ function renderHabitToolbar() {
 
   const btns = [
     { text: "＋ Add Habit", class: "success", click: openAddHabitModal },
-    { text: "📆 Sheet Tabs", class: "", click: openMonthManager },
     { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet },
     { text: "↻ Refresh", class: "primary", click: refreshAll }
   ];
@@ -1514,7 +1403,7 @@ function renderHabitGrid() {
   const table = document.getElementById("grid");
   table.innerHTML = "";
   document.getElementById("panelHeadTitle").textContent = `${currentSheet} (${MONTH_NAMES[currentMonth]} ${currentYear})`;
-  document.getElementById("panelHeadHint").textContent = "Click cell: 🟢 Completed (✓) ➜ 🔴 Missed (✕) ➜ ⏸️ Skipped ➜ ⚪ Blank | Right-click/Click note icon to edit note";
+  document.getElementById("panelHeadHint").textContent = "Click cell: 🟢 Completed (✓) ➜ 🔴 Missed (✕) ➜ ⏸️ Skipped ➜ ⚪ Blank | Right-click for Note";
 
   const daysInMonth = getDaysInCurrentMonth();
   const q = document.getElementById("search").value.toLowerCase();
@@ -1637,7 +1526,7 @@ function renderHabitGrid() {
   table.appendChild(tbody);
 }
 
-/* Cycle habit cell status */
+/* Cycle habit cell status: PENDING -> DONE -> MISSED -> SKIP -> PENDING */
 async function toggleHabitCellStatus(habitIndex, day) {
   const habit = habits[habitIndex];
   if (!habit) return;
@@ -1771,7 +1660,168 @@ function renderHabitStatusList() {
   });
 }
 
-/* ================= 3. ACTIVITY CELL ACTIONS ================= */
+/* ================= ACTIVITY WORKSPACE RENDERER ================= */
+function renderActivityWorkspace() {
+  document.getElementById("heroTitle").textContent = `${currentSheet} - Activity Schedule`;
+  document.getElementById("heroTabType").textContent = "📋 Schedule / Activity Planner Mode";
+  document.getElementById("heroDesc").textContent = "Manage daily activity schedules, time slots, and team tasks. Synchronized directly with Google Sheets.";
+
+  const heroBtns = document.getElementById("heroActionBtns");
+  heroBtns.innerHTML = `
+    <button class="btn success" onclick="addTime()">＋ Add Time Row</button>
+    <button class="btn primary" onclick="addDate()">＋ Add Date Column</button>
+  `;
+
+  document.getElementById("syncCardHeading").textContent = "Sheet Overview";
+  document.getElementById("overallPctBadge").style.display = "none";
+
+  let filled = 0;
+  if (data.length > 1) {
+    data.slice(1).forEach(r => r.slice(1).forEach(v => { if (v && v.trim()) filled++; }));
+  }
+  document.getElementById("stat1Label").textContent = "Current Sheet";
+  document.getElementById("stat1Val").textContent = currentSheet;
+  document.getElementById("stat1Sub").textContent = "Active Sheet Tab";
+
+  document.getElementById("stat2Label").textContent = "Time Slots";
+  document.getElementById("stat2Val").textContent = Math.max(0, data.length - 1);
+  document.getElementById("stat2Sub").textContent = "Rows configured";
+
+  document.getElementById("stat3Label").textContent = "Dates / Columns";
+  document.getElementById("stat3Val").textContent = Math.max(0, (data[0]?.length || 1) - 1);
+  document.getElementById("stat3Sub").textContent = "Columns configured";
+
+  document.getElementById("stat4Label").textContent = "Filled Entries";
+  document.getElementById("stat4Val").textContent = filled;
+  document.getElementById("stat4Sub").textContent = "Logged activities";
+
+  renderActivityToolbar();
+
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  document.getElementById("panelHeadTitle").textContent = currentSheet;
+  document.getElementById("panelHeadHint").textContent = "Click cell to update activity • Double-click date header to rename";
+
+  if (!data.length) {
+    grid.innerHTML = '<tr><td style="padding:25px;text-align:center;color:var(--muted)">No data in this sheet. Click <b>＋ Add Column</b> or <b>＋ Add Row</b> to start.</td></tr>';
+    return;
+  }
+
+  const q = document.getElementById("search").value.toLowerCase();
+  const thead = document.createElement("thead");
+  const head = document.createElement("tr");
+
+  data[0].forEach((v, c) => {
+    const th = document.createElement("th");
+    const div = document.createElement("div");
+    div.className = "th-content";
+
+    const label = document.createElement("span");
+    label.textContent = v || (c === 0 ? "TIME" : `Column ${c + 1}`);
+    div.appendChild(label);
+
+    if (c > 0) {
+      th.title = "Double-click to rename";
+      th.ondblclick = () => renameDate(c + 1);
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "del-mini-btn";
+      delBtn.textContent = "✕";
+      delBtn.title = "Delete column";
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        deleteColumn(c + 1, v || `Column ${c + 1}`);
+      };
+      div.appendChild(delBtn);
+    }
+    th.appendChild(div);
+    head.appendChild(th);
+  });
+  thead.appendChild(head);
+  grid.appendChild(thead);
+
+  const body = document.createElement("tbody");
+  data.slice(1).forEach((row, i) => {
+    if (q && !row.join(" ").toLowerCase().includes(q)) return;
+    const tr = document.createElement("tr");
+    for (let c = 0; c < data[0].length; c++) {
+      const td = document.createElement("td");
+      if (c === 0) {
+        td.style.fontWeight = "700";
+        const div = document.createElement("div");
+        div.className = "row-head-content";
+        const label = document.createElement("span");
+        label.textContent = row[0] || "";
+        div.appendChild(label);
+
+        const delBtn = document.createElement("button");
+        delBtn.className = "del-mini-btn";
+        delBtn.textContent = "✕";
+        delBtn.title = "Delete row";
+        delBtn.onclick = (e) => {
+          e.stopPropagation();
+          deleteRow(i + 2, row[0] || `Row ${i + 2}`);
+        };
+        div.appendChild(delBtn);
+        td.appendChild(div);
+      } else {
+        const div = document.createElement("div");
+        div.className = "cell";
+        const v = row[c] || "";
+
+        const textSpan = document.createElement("span");
+        textSpan.className = "cell-text";
+        textSpan.innerHTML = v ? escapeHtml(v) : '<span class="empty">Click to update</span>';
+        div.appendChild(textSpan);
+
+        if (v && v.trim()) {
+          const clrBtn = document.createElement("span");
+          clrBtn.className = "cell-clear-icon";
+          clrBtn.textContent = "✕ Clear";
+          clrBtn.title = "Clear this cell";
+          clrBtn.onclick = (e) => {
+            e.stopPropagation();
+            clearCellDirect(i + 2, c + 1);
+          };
+          div.appendChild(clrBtn);
+        }
+
+        div.onclick = () => openEditor(i + 2, c + 1, row[0] || "", data[0][c] || "", v);
+        td.appendChild(div);
+      }
+      tr.appendChild(td);
+    }
+    body.appendChild(tr);
+  });
+  grid.appendChild(body);
+}
+
+function renderActivityToolbar() {
+  const container = document.getElementById("toolbarContainer");
+  const searchInput = document.getElementById("search");
+  container.innerHTML = "";
+  container.appendChild(searchInput);
+
+  const btns = [
+    { text: "＋ Add Column", class: "", click: addDate },
+    { text: "＋ Add Row", class: "", click: addTime },
+    { text: "🧹 Clear Cell", class: "danger", click: clearSelected },
+    { text: "🗑️ Delete Column", class: "danger", click: deleteColumnPrompt },
+    { text: "🗑️ Delete Row", class: "danger", click: deleteRowPrompt },
+    { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet },
+    { text: "↻ Refresh", class: "primary", click: refreshAll }
+  ];
+
+  btns.forEach(b => {
+    const btn = document.createElement("button");
+    btn.className = `btn ${b.class}`;
+    btn.textContent = b.text;
+    btn.onclick = b.click;
+    container.appendChild(btn);
+  });
+}
+
+/* ================= ACTIVITY CELL MODALS & EDITING ================= */
 function openEditor(row, col, time, date, value) {
   selected = { row, col };
   document.getElementById("mTime").value = time;
@@ -2036,7 +2086,7 @@ async function deleteCurrentSheet() {
   render();
 }
 
-/* ================= 4. HABIT CELL & NOTE MODAL ACTIONS ================= */
+/* ================= HABIT MODALS & ACTIONS ================= */
 function openAddHabitModal() {
   editingHabitIndex = null;
   document.getElementById("habitModalTitle").textContent = "＋ Add New Habit";
@@ -2208,6 +2258,7 @@ async function saveFullHabitsToGoogleSheet() {
   } catch (e) { console.error("Save habits error:", e); }
 }
 
+/* Parse Cell Values from Google Sheets or Raw Input */
 function parseHabitCell(raw) {
   if (!raw) return { status: "PENDING", note: "" };
   let s = String(raw).trim();
@@ -2219,14 +2270,14 @@ function parseHabitCell(raw) {
     let parts = s.split("|");
     let st = parts[0].trim().toUpperCase();
     note = parts.slice(1).join("|").trim();
-    if (st === "DONE" || st === "✓" || st === "1" || st === "COMPLETED") status = "DONE";
-    else if (st === "MISSED" || st === "✕" || st === "0") status = "MISSED";
-    else if (st === "SKIP" || st === "REST" || st === "⏸") status = "SKIP";
+    if (st === "DONE" || st === "✓" || st === "1" || st === "COMPLETED" || st === "TRUE" || st === "YES" || st === "🟢" || st === "OK") status = "DONE";
+    else if (st === "MISSED" || st === "✕" || st === "0" || st === "FALSE" || st === "NO" || st === "🔴" || st === "X") status = "MISSED";
+    else if (st === "SKIP" || st === "REST" || st === "⏸" || st === "PAUSE") status = "SKIP";
   } else {
     let st = s.toUpperCase();
-    if (st === "DONE" || st === "✓" || st === "1" || st === "COMPLETED") status = "DONE";
-    else if (st === "MISSED" || st === "✕" || st === "0") status = "MISSED";
-    else if (st === "SKIP" || st === "REST" || st === "⏸") status = "SKIP";
+    if (st === "DONE" || st === "✓" || st === "1" || st === "COMPLETED" || st === "TRUE" || st === "YES" || st === "🟢" || st === "OK" || st === "TICK") status = "DONE";
+    else if (st === "MISSED" || st === "✕" || st === "0" || st === "FALSE" || st === "NO" || st === "🔴" || st === "X") status = "MISSED";
+    else if (st === "SKIP" || st === "REST" || st === "⏸" || st === "PAUSE") status = "SKIP";
     else { status = "DONE"; note = s; }
   }
   return { status, note };
@@ -2236,13 +2287,6 @@ function serializeHabitCell(status, note) {
   if (status === "PENDING" && !note) return "";
   if (note) return `${status} | ${note}`;
   return status;
-}
-
-function openMonthManager() {
-  const tabsList = availableSheets.length ? availableSheets.join("\n• ") : "Habit Tracker";
-  const name = prompt(`Available Sheet Tabs:\n• ${tabsList}\n\nEnter sheet tab name to switch to:`, currentSheet);
-  if (!name) return;
-  switchSheetTab(name);
 }
 
 function onMonthChange() {
@@ -2258,7 +2302,7 @@ function toggleAnalyticsView() {
   sec.style.display = sec.style.display === "none" ? "grid" : "none";
 }
 
-/* Utility Helpers */
+/* Helpers */
 function colName(n) {
   let s = "";
   while (n) {
