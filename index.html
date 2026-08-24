@@ -474,11 +474,13 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
 .panel-head h3 { margin: 0; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
 .panel-head span { color: var(--muted); font-size: 12px; }
 
+/* Column-Wise Scrolling & Snapping */
 .table-wrap {
   overflow-x: auto;
   overflow-y: auto;
   max-height: 65vh;
   scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -508,6 +510,10 @@ th {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   min-width: 76px;
+}
+
+th.th-date {
+  scroll-snap-align: start;
 }
 
 th:first-child, td:first-child {
@@ -1017,7 +1023,13 @@ tr.drag-over {
   <section class="panel">
     <div class="panel-head">
       <h3 id="panelHeadTitle">Daily Habit Tracker</h3>
-      <span id="panelHeadHint">Drag handle (≡) to reorder • Click cell to tick: 🟢 Done (✓) ➜ 🔴 Missed (✕) ➜ ⏸️ Skipped ➜ ⚪ Blank</span>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span id="panelHeadHint">Drag handle (≡) to reorder • Click cell to tick: 🟢 Done (✓) ➜ 🔴 Missed (✕) ➜ ⏸️ Skipped ➜ ⚪ Blank</span>
+        <div style="display:inline-flex;gap:6px;margin-left:auto;">
+          <button class="btn" style="padding:4px 10px;font-size:12px;font-weight:800;" onclick="scrollTableCols(-3)" title="Scroll Left 3 Columns">◀ Prev Cols</button>
+          <button class="btn" style="padding:4px 10px;font-size:12px;font-weight:800;" onclick="scrollTableCols(3)" title="Scroll Right 3 Columns">Next Cols ▶</button>
+        </div>
+      </div>
     </div>
     <div class="table-wrap">
       <table id="grid"></table>
@@ -1533,19 +1545,38 @@ function render() {
   }
 }
 
-/* Auto Horizontal Scroll to Today's or Selected Month Date Column */
-function scrollToActiveDateColumn() {
+/* Column-Wise Horizontal Scroll Helper */
+function scrollTableCols(colsToScroll) {
+  const tableWrap = document.querySelector('.table-wrap');
+  if (!tableWrap) return;
+  const colWidth = 84; // Standard column width
+  tableWrap.scrollBy({ left: colsToScroll * colWidth, behavior: 'smooth' });
+}
+
+/* Auto Scroll to Today's or Selected Month Date Column (Smooth Vertical & Column Alignment) */
+function scrollToActiveDateColumn(forceMonthMatch = false) {
   setTimeout(() => {
     const tableWrap = document.querySelector('.table-wrap');
     if (!tableWrap) return;
 
-    // 1. Priority 1: Today's date header column
-    let targetTh = tableWrap.querySelector('th.th-date.today');
+    const monthShort = MONTH_SHORT[currentMonth].toLowerCase();
+    const allDateThs = tableWrap.querySelectorAll('th.th-date');
+    let targetTh = null;
 
-    // 2. Priority 2: First date header matching selected month
+    if (forceMonthMatch) {
+      for (let th of allDateThs) {
+        if (th.textContent.toLowerCase().includes(monthShort)) {
+          targetTh = th;
+          break;
+        }
+      }
+    }
+
     if (!targetTh) {
-      const monthShort = MONTH_SHORT[currentMonth].toLowerCase();
-      const allDateThs = tableWrap.querySelectorAll('th.th-date');
+      targetTh = tableWrap.querySelector('th.th-date.today');
+    }
+
+    if (!targetTh) {
       for (let th of allDateThs) {
         if (th.textContent.toLowerCase().includes(monthShort)) {
           targetTh = th;
@@ -1555,8 +1586,14 @@ function scrollToActiveDateColumn() {
     }
 
     if (targetTh) {
-      const scrollLeftPos = targetTh.offsetLeft - (tableWrap.clientWidth / 2) + (targetTh.clientWidth / 2);
-      tableWrap.scrollTo({ left: Math.max(0, scrollLeftPos), behavior: 'smooth' });
+      const firstColWidth = tableWrap.querySelector('th:first-child')?.clientWidth || 280;
+      const scrollLeftPos = Math.max(0, targetTh.offsetLeft - firstColWidth);
+      tableWrap.scrollTo({ left: scrollLeftPos, behavior: 'smooth' });
+
+      const panel = document.querySelector('.panel');
+      if (panel && forceMonthMatch) {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
   }, 120);
 }
@@ -1669,9 +1706,6 @@ function renderHabitGrid() {
   const table = document.getElementById("grid");
   table.innerHTML = "";
   document.getElementById("panelHeadTitle").textContent = `${currentSheet} (${MONTH_NAMES[currentMonth]} ${currentYear})`;
-  document.getElementById("panelHeadHint").textContent = deleteMode
-    ? "⚠️ INLINE TRASH ICONS VISIBLE: Click 🗑️ / ✕ directly on any row or column to delete it."
-    : "Drag handle (≡) to reorder • Click cell to tick: 🟢 Done (✓) ➜ 🔴 Missed (✕) ➜ ⏸️ Skipped ➜ ⚪ Blank";
 
   const q = document.getElementById("search").value.toLowerCase();
 
@@ -1958,7 +1992,7 @@ async function autoIncrementNextDate() {
 
   buildDefaultCustomDateCols();
   render();
-  scrollToActiveDateColumn();
+  scrollToActiveDateColumn(true);
 
   const nextColLetter = colName(nextColIdx + 1);
   const range = `'${currentSheet}'!${nextColLetter}1`;
@@ -2203,9 +2237,6 @@ function renderActivityWorkspace() {
   const grid = document.getElementById("grid");
   grid.innerHTML = "";
   document.getElementById("panelHeadTitle").textContent = currentSheet;
-  document.getElementById("panelHeadHint").textContent = deleteMode
-    ? "⚠️ INLINE TRASH ICONS VISIBLE: Click ✕ directly on any column or row to delete it."
-    : "Click cell to update activity • Double-click date header to rename";
 
   if (!data.length) {
     grid.innerHTML = '<tr><td style="padding:25px;text-align:center;color:var(--muted)">No data in this sheet. Click <b>＋ Add Column</b> or <b>＋ Add Row</b> to start.</td></tr>';
@@ -2936,7 +2967,7 @@ function onMonthChange() {
   currentYear = yr;
   currentMonth = mo;
   render();
-  scrollToActiveDateColumn();
+  scrollToActiveDateColumn(true);
 }
 
 function toggleAnalyticsView() {
