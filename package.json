@@ -1,0 +1,13 @@
+{
+  "name": "rs-25g-relentless-growth-tracker",
+  "version": "1.0.0",
+  "description": "RS-25G Relentless Growth Tracker & Daily Habit Suite synchronized with Google Sheets",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "build:pwa": "echo PWA build complete. Serve root directory."
+  },
+  "keywords": ["habit-tracker", "google-sheets", "pwa", "android-app"],
+  "author": "RS-25G",
+  "license": "MIT"
+}

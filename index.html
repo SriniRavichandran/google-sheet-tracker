@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RS-25G RELENTLESS GROWTH Tracker</title>
+
+<!-- Progressive Web App (PWA) Manifest & Meta Tags -->
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RS-25G">
+<link rel="apple-touch-icon" href="RS-25G_logo_1024_high_quality.png">
+<meta name="theme-color" content="#0b0709">
+
 <style>
 :root {
   --bg: #0b0709;
@@ -975,6 +985,8 @@ tr.drag-over {
       </select>
     </div>
 
+    <button id="installAppBtn" class="btn primary" style="display:none;" onclick="installPWAApp()">📱 Install App</button>
+
     <button id="loginBtn" class="btn primary" onclick="googleLogin()">
       <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.761H12.545z"/></svg>
       Sign in with Google
@@ -1230,6 +1242,7 @@ let editingHabitIndex = null;
 let draggedHabitIdx = null;
 let isUserEditing = false;
 let userEditTimer = null;
+let deferredPrompt = null;
 
 let currentYear = 2026;
 let currentMonth = 7; // 0-indexed: 7 = August
@@ -1403,6 +1416,40 @@ function changeTheme(themeName) {
 function initTheme() {
   const savedTheme = localStorage.getItem("app_theme") || "relentless";
   changeTheme(savedTheme);
+}
+
+/* PWA App Installation Handler */
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.getElementById("installAppBtn");
+  if (btn) btn.style.display = "inline-flex";
+});
+
+function installPWAApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        toast("RS-25G App Installed Successfully! 🎉");
+      }
+      deferredPrompt = null;
+      document.getElementById("installAppBtn").style.display = "none";
+    });
+  } else {
+    alert("To install RS-25G on Mobile or Desktop:\n\n1. Chrome/Edge (Desktop/Android): Click 'Install' icon (📥) in address bar.\n2. Safari (iOS/iPhone): Tap 'Share' button ➔ Select 'Add to Home Screen'.");
+  }
+}
+
+// Register PWA Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then((reg) => {
+      console.log('RS-25G PWA Service Worker Registered:', reg.scope);
+    }).catch((err) => {
+      console.warn('PWA Service Worker Registration Error:', err);
+    });
+  });
 }
 
 /* ================= INIT ================= */
