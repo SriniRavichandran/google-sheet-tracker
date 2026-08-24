@@ -1549,7 +1549,7 @@ function render() {
 function scrollTableCols(colsToScroll) {
   const tableWrap = document.querySelector('.table-wrap');
   if (!tableWrap) return;
-  const colWidth = 84; // Standard column width
+  const colWidth = 84;
   tableWrap.scrollBy({ left: colsToScroll * colWidth, behavior: 'smooth' });
 }
 
@@ -1595,7 +1595,7 @@ function scrollToActiveDateColumn(forceMonthMatch = false) {
         panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }
-  }, 120);
+  }, 150);
 }
 
 /* Filter custom date columns based on selected month dropdown */
@@ -2054,6 +2054,41 @@ async function populateFullMonthDates() {
 
   await saveFullHabitsToGoogleSheet();
   toast(`Populated ${daysInMonth} dates in Google Sheet for ${MONTH_NAMES[currentMonth]}`);
+}
+
+/* Populate dates for specified month into sheet tab if they don't exist yet */
+async function populateDatesForMonth(yr, mo) {
+  if (!accessToken) return;
+  markUserEditing();
+  const daysInMonth = new Date(yr, mo + 1, 0).getDate();
+  const monthShortUpper = MONTH_SHORT[mo].toUpperCase();
+
+  const existingHeaders = customDateCols.map(c => c.label.toUpperCase());
+  const newLabels = [];
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dayStr = d < 10 ? `0${d}` : `${d}`;
+    const label = `${dayStr}-${monthShortUpper}`;
+    if (!existingHeaders.includes(label)) {
+      newLabels.push(label);
+    }
+  }
+
+  if (newLabels.length > 0) {
+    if (!data.length) data.push(["HABIT"]);
+    newLabels.forEach(lbl => {
+      data[0].push(lbl);
+      for (let r = 1; r < data.length; r++) {
+        data[r].push("");
+      }
+    });
+
+    buildDefaultCustomDateCols();
+    render();
+
+    await saveFullHabitsToGoogleSheet();
+    toast(`Added ${newLabels.length} date columns for ${MONTH_NAMES[mo]} ${yr}`);
+  }
 }
 
 /* Cycle habit cell status */
@@ -2961,12 +2996,22 @@ function serializeHabitCell(status, note) {
   return status;
 }
 
-function onMonthChange() {
+async function onMonthChange() {
   const val = document.getElementById("monthSelect").value;
   const [yr, mo] = val.split("-").map(Number);
   currentYear = yr;
   currentMonth = mo;
-  render();
+
+  const monthShortStr = MONTH_SHORT[currentMonth].toLowerCase();
+  const hasMonthCols = customDateCols.some(col => col.label.toLowerCase().includes(monthShortStr));
+
+  if (!hasMonthCols && accessToken) {
+    toast(`Creating date columns for ${MONTH_NAMES[currentMonth]}...`);
+    await populateDatesForMonth(currentYear, currentMonth);
+  } else {
+    render();
+  }
+
   scrollToActiveDateColumn(true);
 }
 
@@ -2988,7 +3033,7 @@ function colName(n) {
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, m => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&#039;"
   }[m]));
 }
 
