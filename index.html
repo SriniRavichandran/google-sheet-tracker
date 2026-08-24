@@ -490,7 +490,7 @@ th {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  min-width: 60px;
+  min-width: 76px;
 }
 
 th:first-child, td:first-child {
@@ -508,17 +508,27 @@ th:first-child { z-index: 20; background: #0c1b2e; }
 .th-content, .row-head-content { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 
 /* Dynamic Date Column Header */
-.th-date { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+th.th-date {
+  min-width: 76px;
+  text-align: center;
+  vertical-align: middle;
+  padding: 8px 6px;
+}
+.th-date-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
 .th-col-ref { font-size: 9px; color: var(--cyan); font-weight: 800; letter-spacing: 0.05em; }
 .th-date-num { font-size: 13px; font-weight: 900; color: #fff; white-space: nowrap; }
 .th-date-day { font-size: 9px; color: var(--muted); text-transform: uppercase; }
-.th-date.today {
+th.th-date.today {
   background: var(--today-bg);
-  border-radius: 8px;
-  padding: 4px 6px;
   box-shadow: inset 0 0 0 1px var(--today-border);
 }
-.th-date.today .th-date-num { color: var(--cyan); text-shadow: 0 0 10px rgba(54, 224, 255, 0.5); }
+th.th-date.today .th-date-num { color: var(--cyan); text-shadow: 0 0 10px rgba(54, 224, 255, 0.5); }
 
 /* Activity Cell */
 .cell {
@@ -804,7 +814,7 @@ th:first-child { z-index: 20; background: #0c1b2e; }
           <span style="background:rgba(53,211,153,0.18);color:var(--green);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:800;" id="heroTabType">🔥 Habit Checkmark Mode</span>
         </div>
         <p class="hero-subtitle" id="heroDesc">
-          Track daily checkmarks, build consistency streaks, analyze weekly & monthly progress, and add date notes. Synchronized in real-time with Google Sheets.
+          Track daily checkmarks, build consistency streaks, analyze weekly & monthly progress, auto-increment dates, and add date notes. Synchronized in real-time with Google Sheets.
         </p>
       </div>
       <div style="display:flex;gap:12px;margin-top:16px;" id="heroActionBtns">
@@ -1517,9 +1527,11 @@ function renderHabitGrid() {
     th.ondblclick = () => renameDate(colInfo.colIndex + 1);
 
     th.innerHTML = `
-      <div class="th-col-ref">COL ${colInfo.colLetter}</div>
-      <div class="th-date-num">${escapeHtml(colInfo.label)}</div>
-      <div class="th-date-day">${colInfo.dayName || ''}</div>
+      <div class="th-date-wrap">
+        <div class="th-col-ref">COL ${colInfo.colLetter}</div>
+        <div class="th-date-num">${escapeHtml(colInfo.label)}</div>
+        <div class="th-date-day">${colInfo.dayName || ''}</div>
+      </div>
     `;
     trHead.appendChild(th);
   });
@@ -2285,7 +2297,7 @@ function saveHabitForm() {
     habits[editingHabitIndex].title = title;
     habits[editingHabitIndex].icon = icon;
     habits[editingHabitIndex].target = target;
-    data[editingHabitIndex + 1][0] = title;
+    if (data[editingHabitIndex + 1]) data[editingHabitIndex + 1][0] = title;
     toast("Habit updated");
   } else {
     habits.push({ id: "h_" + Date.now(), title, icon, target, entries: {} });
