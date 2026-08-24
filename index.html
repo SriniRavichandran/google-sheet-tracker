@@ -59,8 +59,8 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
 
 /* Header */
 .top {
-  height: 76px;
-  padding: 0 24px;
+  min-height: 76px;
+  padding: 12px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -70,6 +70,8 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
   position: sticky;
   top: 0;
   z-index: 100;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .brand {
@@ -89,6 +91,7 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
   box-shadow: 0 8px 25px rgba(22, 140, 255, 0.45);
   transform: perspective(500px) rotateX(10deg) rotateY(-8deg);
   letter-spacing: -0.5px;
+  flex-shrink: 0;
 }
 .brand-text h1 {
   font-size: 18px;
@@ -104,12 +107,14 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .top-actions {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 /* Mode Switcher Pills */
@@ -161,6 +166,7 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
 }
 .btn:hover {
   transform: translateY(-2px);
@@ -241,6 +247,7 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
   margin-bottom: 16px;
   overflow-x: auto;
   padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
 }
 .tab { white-space: nowrap; }
 .tab.active {
@@ -291,6 +298,8 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .hero-title h2 { margin: 0; font-size: 26px; font-weight: 800; }
 .hero-subtitle { color: var(--muted); font-size: 14px; margin-top: 4px; max-width: 780px; line-height: 1.5; }
@@ -342,6 +351,8 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .weekly-bars {
@@ -376,7 +387,7 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
   transition: height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 -4px 15px rgba(54, 224, 255, 0.4);
 }
-.weekly-label { font-size: 11px; color: var(--muted); margin-top: 8px; font-weight: 700; }
+.weekly-label { font-size: 11px; color: var(--muted); margin-top: 8px; font-weight: 700; text-align: center; }
 .weekly-pct { font-size: 11px; font-weight: 800; color: #fff; margin-bottom: 4px; }
 
 /* Habit Overview Cards */
@@ -397,6 +408,8 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
   border: 1px solid var(--line);
   border-radius: 12px;
   transition: 0.2s;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .habit-status-item:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(54, 224, 255, 0.3); }
 .habit-info-mini { display: flex; align-items: center; gap: 10px; }
@@ -454,6 +467,8 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
   justify-content: space-between;
   border-bottom: 1px solid var(--line);
   background: rgba(10, 22, 38, 0.9);
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .panel-head h3 { margin: 0; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
 .panel-head span { color: var(--muted); font-size: 12px; }
@@ -463,6 +478,7 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
   overflow-y: auto;
   max-height: 65vh;
   scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
 table {
@@ -725,7 +741,9 @@ tr.drag-over {
   z-index: 200;
 }
 .modal {
-  width: min(540px, 100%);
+  width: min(540px, 94vw);
+  max-height: 90vh;
+  overflow-y: auto;
   padding: 26px;
   border-radius: 22px;
   background: linear-gradient(145deg, #172e4a, #0b1a2c);
@@ -789,10 +807,81 @@ tr.drag-over {
   font-size: 13px;
 }
 
+/* Responsive Styles for Desktop, Tablet & Mobile */
 @media (max-width: 1024px) {
   .hero { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .analytics-section { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .top {
+    min-height: auto;
+    padding: 14px 16px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .top-actions {
+    justify-content: space-between;
+    width: 100%;
+  }
+  .wrap {
+    padding: 14px;
+  }
+  .hero-card {
+    padding: 18px;
+  }
+  .hero-title h2 {
+    font-size: 20px;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .stat-card {
+    padding: 14px;
+  }
+  .stat-value {
+    font-size: 22px;
+  }
+  th:first-child, td:first-child {
+    min-width: 210px;
+    max-width: 240px;
+    padding: 8px 10px;
+  }
+  .cell-habit {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+  }
+  .cell-habit.done::after { font-size: 18px; }
+  .cell-habit.missed::after { font-size: 16px; }
+  .status-picker {
+    flex-wrap: wrap;
+  }
+  .status-opt {
+    min-width: 45%;
+  }
+  .modal {
+    padding: 18px;
+  }
+  .modal-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .modal-btn-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-text h1 { font-size: 15px; }
+  .mode-btn { padding: 6px 10px; font-size: 11px; }
+  .stats-grid { grid-template-columns: 1fr; }
+  th:first-child, td:first-child { min-width: 175px; max-width: 200px; padding: 6px 8px; }
+  .habit-name { font-size: 12px; }
+  .habit-icon { width: 28px; height: 28px; font-size: 15px; }
 }
 </style>
 </head>
@@ -848,7 +937,7 @@ tr.drag-over {
           Track daily checkmarks, drag & drop to reorder habits, configure target frequencies (Daily, 1x/Week, 1x/Month, 4x/Year), and analyze weekly progress. Real-time synced with Google Sheets.
         </p>
       </div>
-      <div style="display:flex;gap:12px;margin-top:16px;" id="heroActionBtns">
+      <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;" id="heroActionBtns">
         <!-- Dynamic Action Buttons -->
       </div>
     </div>
@@ -1044,19 +1133,19 @@ tr.drag-over {
 const CONFIG = {
   GOOGLE_CLIENT_ID: "223951688164-fpfp028pti606lavi5iel7rihgts878v.apps.googleusercontent.com",
   GOOGLE_SHEET_ID: "1RLzyoUbukIBBovTmdciqBD30_VVtuFNZgQTieA2OK9I",
-  SHEET_NAME: "Daily Activity Planner",
+  SHEET_NAME: "Habit Tracker",
   SCOPES: "https://www.googleapis.com/auth/spreadsheets"
 };
 
 let accessToken = null;
 let currentSheet = CONFIG.SHEET_NAME;
-let availableSheets = ["Daily Activity Planner", "Daily Focus", "Manage Conflict", "Habit Tracker"];
+let availableSheets = []; // 100% loaded dynamically from Google Sheets API
 let sheetMap = {};
 
 let viewMode = "habit"; // 'habit' or 'activity'
-let data = []; // Raw matrix from Google Sheets
-let habits = []; // Habit definitions & entries
-let customDateCols = []; // [{ key: "10-Aug", label: "10-Aug", colIndex: 1, colLetter: "B", dayName: "Mon", dateObj: Date }]
+let data = []; // Raw matrix from Google Sheets (100% dynamic)
+let habits = []; // Habit definitions & entries (100% dynamic, 0 hardcoded fallbacks!)
+let customDateCols = []; // [{ key: "11-AUG", label: "11-AUG", colIndex: 1, colLetter: "B", dayName: "Tue", dateObj: Date }]
 let startColIndex = 1; // 1 = Col B (if no Target col), 2 = Col C (if Target col present)
 let selected = null;
 let selectedHabitCell = null;
@@ -1074,82 +1163,6 @@ const MONTH_NAMES = [
 ];
 
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/* Demo Habits with Target Options (Daily, 1x/Week, 1x/Month, 4x/Year) */
-const DEFAULT_HABITS = [
-  { id: "h1", title: "🏋️ Morning Workout", icon: "🏋️", target: "Daily", entries: {
-    "10-Aug": {status: "DONE", note: "Upper body session"},
-    "11-Aug": {status: "DONE", note: "5km run"},
-    "Aug 12": {status: "DONE", note: "HIIT workout"},
-    "Aug 13": {status: "MISSED", note: "Rest day"},
-    "Aug 14": {status: "DONE", note: "Yoga"},
-    "Aug 15": {status: "DONE", note: "Legs workout"}
-  }},
-  { id: "h2", title: "📚 Read 20 Pages", icon: "📚", target: "Daily", entries: {
-    "10-Aug": {status: "DONE", note: "Ch 4 Atomic Habits"},
-    "11-Aug": {status: "DONE", note: "Ch 5 Atomic Habits"},
-    "Aug 12": {status: "DONE", note: "Ch 6"},
-    "Aug 13": {status: "DONE", note: "Read 30 mins"},
-    "Aug 14": {status: "MISSED", note: "Busy schedule"},
-    "Aug 15": {status: "DONE", note: "Ch 7"}
-  }},
-  { id: "h3", title: "🧘 Meditation & Breathwork", icon: "🧘", target: "Daily", entries: {
-    "10-Aug": {status: "DONE", note: "10 min breathwork"},
-    "11-Aug": {status: "DONE", note: "15 min mindfulness"},
-    "Aug 12": {status: "DONE", note: "Relaxation"},
-    "Aug 13": {status: "DONE", note: "10 mins"},
-    "Aug 14": {status: "DONE", note: "10 mins"},
-    "Aug 15": {status: "MISSED", note: "Skipped morning"}
-  }},
-  { id: "h4", title: "💻 Code & Build Projects", icon: "💻", target: "1x/Week", entries: {
-    "10-Aug": {status: "DONE", note: "Built Habit Features"},
-    "11-Aug": {status: "DONE", note: "Added Streaks logic"},
-    "Aug 12": {status: "DONE", note: "Google API sync"},
-    "Aug 13": {status: "DONE", note: "Refactored UI"},
-    "Aug 14": {status: "DONE", note: "Dashboard charts"},
-    "Aug 15": {status: "DONE", note: "UI polish"}
-  }},
-  { id: "h5", title: "💧 Drink 3L Water", icon: "💧", target: "Daily", entries: {
-    "10-Aug": {status: "DONE", note: "3.5L total"},
-    "11-Aug": {status: "DONE", note: "3L reached"},
-    "Aug 12": {status: "MISSED", note: "1.5L only"},
-    "Aug 13": {status: "DONE", note: "3L reached"},
-    "Aug 14": {status: "DONE", note: "3L reached"},
-    "Aug 15": {status: "DONE", note: "3.2L"}
-  }},
-  { id: "h6", title: "🍎 Healthy Meals / No Sugar", icon: "🍎", target: "1x/Month", entries: {
-    "10-Aug": {status: "DONE", note: "Clean diet"},
-    "11-Aug": {status: "MISSED", note: "Sugar cheat"},
-    "Aug 12": {status: "DONE", note: "Clean diet"},
-    "Aug 13": {status: "DONE", note: "Clean diet"},
-    "Aug 14": {status: "DONE", note: "Clean diet"},
-    "Aug 15": {status: "DONE", note: "Clean diet"}
-  }},
-  { id: "h7", title: "😴 8 Hours Sleep", icon: "😴", target: "4x/Year", entries: {
-    "10-Aug": {status: "DONE", note: "8h 15m"},
-    "11-Aug": {status: "DONE", note: "8h"},
-    "Aug 12": {status: "DONE", note: "8h 30m"},
-    "Aug 13": {status: "DONE", note: "8h"},
-    "Aug 14": {status: "MISSED", note: "Late night work"},
-    "Aug 15": {status: "DONE", note: "8h 10m"}
-  }}
-];
-
-const DEFAULT_DATE_COLS = ["10-Aug", "11-Aug", "Aug 12", "Aug 13", "Aug 14", "Aug 15"];
-
-/* Default Activity Schedule Data */
-const INITIAL_ACTIVITY_DATA = {
-  "Daily Activity Planner": [
-    ["HABIT", "10-Aug", "11-Aug", "Aug 12", "Aug 13", "Aug 14", "Aug 15"],
-    ["🏋️ Morning Workout", "DONE", "DONE", "DONE", "MISSED", "DONE", "DONE"],
-    ["📚 Read 20 Pages", "DONE", "DONE", "DONE", "DONE", "MISSED", "DONE"],
-    ["🧘 Meditation & Breathwork", "DONE", "DONE", "DONE", "DONE", "DONE", "MISSED"],
-    ["💻 Code & Build Projects", "DONE", "DONE", "DONE", "DONE", "DONE", "DONE"],
-    ["💧 Drink 3L Water", "DONE", "DONE", "MISSED", "DONE", "DONE", "DONE"],
-    ["🍎 Healthy Meals / No Sugar", "DONE", "MISSED", "DONE", "DONE", "DONE", "DONE"],
-    ["😴 8 Hours Sleep", "DONE", "DONE", "DONE", "DONE", "MISSED", "DONE"]
-  ]
-};
 
 /* ================= INIT ================= */
 window.addEventListener("DOMContentLoaded", () => {
@@ -1188,7 +1201,7 @@ function getDaysInCurrentMonth() {
   return new Date(currentYear, currentMonth + 1, 0).getDate();
 }
 
-/* Parse custom date headers like "10-Aug", "11-Aug", "Aug 12", "Aug 13", "14 Aug", "15-08-2026" */
+/* Parse custom date headers dynamically from Google Sheet Row 0 (e.g. "11-AUG", "12-AUG", "10-Aug") */
 function parseCustomDateHeader(headerText) {
   if (!headerText) return { label: "Date", dayName: "", isToday: false, monthIndex: currentMonth, dayNum: 1 };
   const str = String(headerText).trim();
@@ -1218,14 +1231,14 @@ function parseCustomDateHeader(headerText) {
   };
 }
 
-/* Detect Column Alignment (Col B is Date vs Col B is Target) */
+/* Detect Column Alignment Dynamically (Col B is Date vs Col B is Target) */
 function detectStartColIndex(headerRow) {
   if (!headerRow || headerRow.length < 2) return 1;
   const col1 = String(headerRow[1] || "").toLowerCase().trim();
   if (col1.includes("target") || col1.includes("goal") || col1.includes("freq") || col1.includes("category")) {
     return 2; // Date starts at Col C (Index 2)
   }
-  return 1; // Date starts at Col B (Index 1) - Matching user's exact screenshot!
+  return 1; // Date starts at Col B (Index 1) - Matching user's exact sheet!
 }
 
 /* ================= GOOGLE AUTH & API ================= */
@@ -1277,31 +1290,39 @@ async function api(url, options = {}) {
   return r.json();
 }
 
+/* Fetch All Sheet Tabs Dynamically from Google Sheets API */
 async function fetchSheetTabs() {
   if (!accessToken) return;
   try {
     const res = await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}?fields=sheets.properties(sheetId,title)`);
     if (res.sheets && res.sheets.length) {
       sheetMap = {};
-      const fetched = res.sheets.map(s => {
+      availableSheets = res.sheets.map(s => {
         sheetMap[s.properties.title] = s.properties.sheetId;
         return s.properties.title;
       });
-      fetched.forEach(t => { if (!availableSheets.includes(t)) availableSheets.push(t); });
+      if (!availableSheets.includes(currentSheet)) {
+        currentSheet = availableSheets[0] || CONFIG.SHEET_NAME;
+      }
       renderTabs();
     }
   } catch (e) { console.warn("Could not fetch sheets:", e); }
 }
 
+/* Load Sheet Strictly from Google Sheets API - 100% Dynamic */
 async function loadSheet() {
   if (!accessToken) return setSync("Local Mode", "offline");
-  if (isUserEditing) return; // Don't overwrite while user is actively editing
+  if (isUserEditing) return;
 
   try {
     setSync("Syncing...", "online");
     const range = `'${currentSheet}'`;
     const res = await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}`);
     const rawValues = res.values || [];
+
+    data = [];
+    habits = [];
+    customDateCols = [];
 
     if (rawValues.length > 0) {
       let maxCols = Math.max(...rawValues.map(row => row.length));
@@ -1311,18 +1332,17 @@ async function loadSheet() {
         return copy;
       });
 
-      // Header row & Start Column Alignment
       const headerRow = rawValues[0] || [];
       startColIndex = detectStartColIndex(headerRow);
 
-      customDateCols = [];
       for (let c = startColIndex; c < headerRow.length; c++) {
-        if (headerRow[c] && headerRow[c].trim()) {
+        if (headerRow[c] && String(headerRow[c]).trim()) {
+          const label = String(headerRow[c]).trim();
           customDateCols.push({
             colIndex: c,
             colLetter: colName(c + 1),
-            key: headerRow[c].trim(),
-            ...parseCustomDateHeader(headerRow[c].trim())
+            key: label,
+            ...parseCustomDateHeader(label)
           });
         }
       }
@@ -1332,13 +1352,12 @@ async function loadSheet() {
         document.getElementById("monthSelect").value = `${currentYear}-${currentMonth}`;
       }
 
-      // Parse Habits with exact alignment
-      habits = [];
+      // Parse Habits strictly from Google Sheet rows
       for (let r = 1; r < rawValues.length; r++) {
         const row = rawValues[r];
-        if (!row || !row[0]) continue;
-        const habitTitle = row[0] || "Habit";
-        const habitTarget = (startColIndex === 2 && row[1]) ? row[1] : "Daily";
+        if (!row || !row[0] || !String(row[0]).trim()) continue;
+        const habitTitle = String(row[0]).trim();
+        const habitTarget = (startColIndex === 2 && row[1]) ? String(row[1]).trim() : "Daily";
         const icon = habitTitle.match(/(\p{Extended_Pictographic})/u)?.[0] || "🎯";
         const entries = {};
 
@@ -1353,15 +1372,8 @@ async function loadSheet() {
         habits.push({ id: "h_" + r + "_" + Date.now(), title: habitTitle, icon, target: habitTarget, entries });
       }
     } else {
-      // Empty sheet tab in Google Sheets - auto push demo habits
-      if (!habits.length) habits = JSON.parse(JSON.stringify(DEFAULT_HABITS));
-      if (!customDateCols.length) buildDefaultCustomDateCols();
-      await saveFullHabitsToGoogleSheet();
+      data = [["HABIT"]];
     }
-
-    if (!habits.length) habits = JSON.parse(JSON.stringify(DEFAULT_HABITS));
-    if (!data.length) data = INITIAL_ACTIVITY_DATA[currentSheet] || [["HABIT", "10-Aug", "11-Aug"], ["🏋️ Morning Workout", "", ""]];
-    if (!customDateCols.length) buildDefaultCustomDateCols();
 
     saveLocalState();
     render();
@@ -1374,17 +1386,20 @@ async function loadSheet() {
 }
 
 function buildDefaultCustomDateCols() {
-  const headerRow = (data && data.length > 0) ? data[0] : ["HABIT", ...DEFAULT_DATE_COLS];
-  startColIndex = detectStartColIndex(headerRow);
   customDateCols = [];
+  if (!data || data.length === 0 || !data[0]) return;
+  const headerRow = data[0];
+  startColIndex = detectStartColIndex(headerRow);
   for (let c = startColIndex; c < headerRow.length; c++) {
-    const label = headerRow[c] || `Day ${c}`;
-    customDateCols.push({
-      colIndex: c,
-      colLetter: colName(c + 1),
-      key: label,
-      ...parseCustomDateHeader(label)
-    });
+    if (headerRow[c] && String(headerRow[c]).trim()) {
+      const label = String(headerRow[c]).trim();
+      customDateCols.push({
+        colIndex: c,
+        colLetter: colName(c + 1),
+        key: label,
+        ...parseCustomDateHeader(label)
+      });
+    }
   }
 }
 
@@ -1403,19 +1418,20 @@ function getStorageKey(type = "data") {
 }
 
 function loadLocalState() {
+  if (accessToken) return; // If Google API connected, load strictly from Google Sheets!
   const savedData = localStorage.getItem(getStorageKey("data"));
   const savedHabits = localStorage.getItem(getStorageKey("habits"));
 
   if (savedData) {
-    try { data = JSON.parse(savedData); } catch(e){ data = INITIAL_ACTIVITY_DATA[currentSheet] || [["HABIT", "10-Aug", "11-Aug"], ["🏋️ Morning Workout", "", ""]]; }
+    try { data = JSON.parse(savedData); } catch(e){ data = [["HABIT"]]; }
   } else {
-    data = INITIAL_ACTIVITY_DATA[currentSheet] || [["HABIT", "10-Aug", "11-Aug"], ["🏋️ Morning Workout", "", ""]];
+    data = [["HABIT"]];
   }
 
   if (savedHabits) {
-    try { habits = JSON.parse(savedHabits); } catch(e){ habits = JSON.parse(JSON.stringify(DEFAULT_HABITS)); }
+    try { habits = JSON.parse(savedHabits); } catch(e){ habits = []; }
   } else {
-    habits = JSON.parse(JSON.stringify(DEFAULT_HABITS));
+    habits = [];
   }
 
   buildDefaultCustomDateCols();
@@ -1430,6 +1446,8 @@ function saveLocalState() {
 function renderTabs() {
   const container = document.getElementById("sheetTabs");
   container.innerHTML = "";
+
+  if (availableSheets.length === 0) availableSheets = [currentSheet];
 
   availableSheets.forEach(name => {
     const btn = document.createElement("button");
@@ -1477,9 +1495,8 @@ function render() {
 
 /* ================= HABIT WORKSPACE RENDERER ================= */
 function renderHabitWorkspace() {
-  const monthTitle = `${MONTH_NAMES[currentMonth]} ${currentYear}`;
-  document.getElementById("heroTitle").textContent = `${currentSheet} - Habit Tracker`;
-  document.getElementById("heroTabType").textContent = "🔥 Habit Checkmark & Auto-Date Mode";
+  document.getElementById("heroTitle").textContent = `${currentSheet}`;
+  document.getElementById("heroTabType").textContent = "🔥 Habit Checkmark Mode";
   document.getElementById("heroDesc").textContent = "Track daily checkmarks, drag & drop to reorder habits, configure target frequencies (Daily, 1x/Week, 1x/Month, 4x/Year), and analyze weekly progress. Real-time synced with Google Sheets.";
 
   const heroBtns = document.getElementById("heroActionBtns");
@@ -1492,7 +1509,7 @@ function renderHabitWorkspace() {
   document.getElementById("syncCardHeading").textContent = "Overall Consistency";
   document.getElementById("overallPctBadge").style.display = "inline-block";
 
-  // Calculate Habit Stats
+  // Calculate Habit Stats Dynamically
   let totalPossible = habits.length * Math.max(1, customDateCols.length);
   let totalDone = 0;
   let totalMissed = 0;
@@ -1599,6 +1616,21 @@ function renderHabitGrid() {
   table.appendChild(thead);
 
   const tbody = document.createElement("tbody");
+
+  if (habits.length === 0) {
+    const trEmpty = document.createElement("tr");
+    const tdEmpty = document.createElement("td");
+    tdEmpty.colSpan = Math.max(1, customDateCols.length + 1);
+    tdEmpty.style.padding = "45px 20px";
+    tdEmpty.style.textAlign = "center";
+    tdEmpty.style.color = "var(--muted)";
+    tdEmpty.style.fontSize = "14px";
+    tdEmpty.innerHTML = `No habits found in this Google Sheet.<br><br>Click <b style="color:var(--green);cursor:pointer;" onclick="openAddHabitModal()">＋ Add New Habit</b> to start tracking!`;
+    trEmpty.appendChild(tdEmpty);
+    tbody.appendChild(trEmpty);
+    table.appendChild(tbody);
+    return;
+  }
 
   habits.forEach((habit, hIdx) => {
     if (q && !habit.title.toLowerCase().includes(q) && !JSON.stringify(habit.entries).toLowerCase().includes(q)) return;
@@ -1735,8 +1767,8 @@ function handleDrop(e, targetIdx, tr) {
   toast("Reordered habit row");
 }
 
-/* Remove Row Direct Action */
-function deleteHabitRowDirect(hIdx) {
+/* Remove Row Direct Action - Deletes physically from Google Sheets */
+async function deleteHabitRowDirect(hIdx) {
   const h = habits[hIdx];
   if (!h) return;
   if (!confirm(`Are you sure you want to remove row "${h.title}"?`)) return;
@@ -1748,11 +1780,35 @@ function deleteHabitRowDirect(hIdx) {
   saveLocalState();
   render();
 
-  if (accessToken) saveFullHabitsToGoogleSheet();
+  if (accessToken) {
+    const currentSheetId = sheetMap[currentSheet] ?? 0;
+    const row1Based = hIdx + 2; // Row 1 is Header, row 2 is habit 0
+    try {
+      await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requests: [{
+            deleteDimension: {
+              range: {
+                sheetId: currentSheetId,
+                dimension: "ROWS",
+                startIndex: row1Based - 1,
+                endIndex: row1Based
+              }
+            }
+          }]
+        })
+      });
+    } catch (e) {
+      console.warn("deleteDimension error:", e);
+    }
+    await saveFullHabitsToGoogleSheet();
+  }
   toast(`Removed habit "${h.title}"`);
 }
 
-/* Auto Next Date Feature: Auto-increment date header */
+/* Auto Next Date Feature: Auto-increment date header dynamically */
 async function autoIncrementNextDate() {
   markUserEditing();
   let nextDayNum = 1;
@@ -1762,12 +1818,12 @@ async function autoIncrementNextDate() {
   if (customDateCols.length > 0) {
     const lastCol = customDateCols[customDateCols.length - 1];
     nextDayNum = (lastCol.dayNum || 15) + 1;
-    if (lastCol.label.startsWith("Aug ") || lastCol.label.startsWith("Jan ")) {
-      formatPattern = "MMM DD";
+    if (lastCol.label.startsWith("Aug ") || lastCol.label.startsWith("Jan ") || lastCol.label.includes("-AUG") || lastCol.label.includes("-AUG")) {
+      formatPattern = "DD-MMM";
     }
   }
 
-  const nextLabel = formatPattern === "MMM DD" ? `${monthShort} ${nextDayNum}` : `${nextDayNum}-${monthShort}`;
+  const nextLabel = formatPattern === "MMM DD" ? `${monthShort} ${nextDayNum}` : `${nextDayNum}-${monthShort.toUpperCase()}`;
   const nextColIdx = (data && data.length > 0) ? data[0].length : 1;
 
   if (!data.length) data.push(["HABIT"]);
@@ -1798,7 +1854,7 @@ async function autoIncrementNextDate() {
 async function populateFullMonthDates() {
   markUserEditing();
   const daysInMonth = getDaysInCurrentMonth();
-  const monthShort = MONTH_SHORT[currentMonth];
+  const monthShort = MONTH_SHORT[currentMonth].toUpperCase();
 
   data[0] = ["HABIT"];
   for (let d = 1; d <= daysInMonth; d++) {
@@ -1937,6 +1993,11 @@ function renderHabitStatusList() {
   const container = document.getElementById("habitStatusList");
   container.innerHTML = "";
   const latestCol = customDateCols.length > 0 ? customDateCols[customDateCols.length - 1] : null;
+
+  if (habits.length === 0) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px;">No active habits</div>';
+    return;
+  }
 
   habits.forEach(h => {
     const entry = latestCol ? (h.entries[latestCol.key] || { status: "PENDING" }) : { status: "PENDING" };
@@ -2267,7 +2328,6 @@ async function deleteColumn(col1Based, colNameText = "") {
   markUserEditing();
   data.forEach(r => r.splice(col1Based - 1, 1));
   buildDefaultCustomDateCols();
-  saveLocalState();
   render();
 
   if (accessToken) {
@@ -2280,9 +2340,11 @@ async function deleteColumn(col1Based, colNameText = "") {
           requests: [{ deleteDimension: { range: { sheetId: currentSheetId, dimension: "COLUMNS", startIndex: col1Based - 1, endIndex: col1Based } } }]
         })
       });
-      document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
+      await saveFullHabitsToGoogleSheet();
       toast(`Deleted column "${colNameText}"`);
     } catch (e) { alert(e.message); }
+  } else {
+    saveLocalState();
   }
 }
 
@@ -2299,8 +2361,9 @@ async function deleteColumnPrompt() {
 async function deleteRow(row1Based, rowNameText = "") {
   if (!confirm(`Are you sure you want to delete row "${rowNameText || row1Based}"?`)) return;
   markUserEditing();
+
   data.splice(row1Based - 1, 1);
-  saveLocalState();
+  if (habits[row1Based - 2]) habits.splice(row1Based - 2, 1);
   render();
 
   if (accessToken) {
@@ -2313,9 +2376,11 @@ async function deleteRow(row1Based, rowNameText = "") {
           requests: [{ deleteDimension: { range: { sheetId: currentSheetId, dimension: "ROWS", startIndex: row1Based - 1, endIndex: row1Based } } }]
         })
       });
-      document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
+      await saveFullHabitsToGoogleSheet();
       toast(`Deleted row "${rowNameText}"`);
     } catch (e) { alert(e.message); }
+  } else {
+    saveLocalState();
   }
 }
 
@@ -2400,7 +2465,7 @@ async function deleteCurrentSheet() {
     } catch (e) { alert(e.message); }
   }
 
-  currentSheet = availableSheets[0] || "Daily Activity Planner";
+  currentSheet = availableSheets[0] || "Habit Tracker";
   loadLocalState();
   renderTabs();
   render();
@@ -2463,16 +2528,46 @@ function saveHabitForm() {
   if (accessToken) saveFullHabitsToGoogleSheet();
 }
 
-function deleteCurrentEditingHabit() {
+async function deleteCurrentEditingHabit() {
   if (editingHabitIndex === null) return;
-  if (!confirm(`Delete habit "${habits[editingHabitIndex].title}"?`)) return;
+  const h = habits[editingHabitIndex];
+  if (!h) return;
+  if (!confirm(`Delete habit "${h.title}"?`)) return;
+
   markUserEditing();
-  habits.splice(editingHabitIndex, 1);
-  data.splice(editingHabitIndex + 1, 1);
+  const hIdx = editingHabitIndex;
+  habits.splice(hIdx, 1);
+  if (data[hIdx + 1]) data.splice(hIdx + 1, 1);
+
   saveLocalState();
   closeHabitModal();
   render();
-  if (accessToken) saveFullHabitsToGoogleSheet();
+
+  if (accessToken) {
+    const currentSheetId = sheetMap[currentSheet] ?? 0;
+    const row1Based = hIdx + 2;
+    try {
+      await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requests: [{
+            deleteDimension: {
+              range: {
+                sheetId: currentSheetId,
+                dimension: "ROWS",
+                startIndex: row1Based - 1,
+                endIndex: row1Based
+              }
+            }
+          }]
+        })
+      });
+    } catch (e) {
+      console.warn("deleteDimension error:", e);
+    }
+    await saveFullHabitsToGoogleSheet();
+  }
   toast("Habit deleted");
 }
 
@@ -2574,8 +2669,20 @@ async function updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, status, 
   }
 }
 
+/* Clear Sheet First Then Write Full Habits to Google Sheet - 100% Dynamic */
 async function saveFullHabitsToGoogleSheet() {
   if (!accessToken) return;
+
+  // Clear sheet range A1:Z500 first to delete lingering rows/columns permanently
+  try {
+    const clearRange = `'${currentSheet}'!A1:Z500`;
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(clearRange)}:clear`, {
+      method: "POST"
+    });
+  } catch (e) {
+    console.warn("Clear sheet range error:", e);
+  }
+
   const headers = (startColIndex === 2) ? ["HABIT", "TARGET"] : ["HABIT"];
   customDateCols.forEach(colInfo => headers.push(colInfo.label));
 
