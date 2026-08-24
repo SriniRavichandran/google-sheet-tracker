@@ -490,14 +490,14 @@ th {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  min-width: 52px;
+  min-width: 60px;
 }
 
 th:first-child, td:first-child {
   position: sticky;
   left: 0;
   z-index: 16;
-  min-width: 240px;
+  min-width: 250px;
   max-width: 320px;
   background: #0d1e33;
   text-align: left;
@@ -507,10 +507,10 @@ th:first-child { z-index: 20; background: #0c1b2e; }
 
 .th-content, .row-head-content { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 
-/* Habit Date Column Header */
+/* Dynamic Date Column Header */
 .th-date { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.th-date-num { font-size: 14px; font-weight: 900; color: #fff; }
-.th-date-day { font-size: 9px; color: var(--muted); }
+.th-date-num { font-size: 13px; font-weight: 900; color: #fff; white-space: nowrap; }
+.th-date-day { font-size: 9px; color: var(--muted); text-transform: uppercase; }
 .th-date.today {
   background: var(--today-bg);
   border-radius: 8px;
@@ -767,7 +767,7 @@ th:first-child { z-index: 20; background: #0c1b2e; }
   </div>
 
   <div class="top-actions">
-    <!-- View Mode Switcher -->
+    <!-- Mode Switcher -->
     <div class="mode-switcher">
       <button id="btnViewHabit" class="mode-btn active habit-mode" onclick="setViewMode('habit')">🔥 Habit Tracker (Ticks)</button>
       <button id="btnViewActivity" class="mode-btn" onclick="setViewMode('activity')">📋 Schedule / Activity</button>
@@ -937,7 +937,7 @@ th:first-child { z-index: 20; background: #0c1b2e; }
     </div>
     <div class="field">
       <label>Target Frequency</label>
-      <input id="hTarget" class="input" placeholder="e.g. Daily or 5x per week">
+      <input id="hTarget" class="input" placeholder="e.g. Daily or 6x/week">
     </div>
     <div class="modal-actions">
       <button class="btn danger" id="hDeleteBtn" style="display:none" onclick="deleteCurrentEditingHabit()">Delete Habit</button>
@@ -958,7 +958,7 @@ th:first-child { z-index: 20; background: #0c1b2e; }
       <input id="nHabitName" class="input" readonly style="font-weight:700;color:var(--cyan)">
     </div>
     <div class="field">
-      <label>Date</label>
+      <label>Date Column</label>
       <input id="nDateText" class="input" readonly>
     </div>
     <div class="field">
@@ -1004,10 +1004,11 @@ let availableSheets = ["Daily Activity Planner", "Daily Focus", "Manage Conflict
 let sheetMap = {};
 
 let viewMode = "habit"; // 'habit' or 'activity'
-let data = []; // Activity matrix
-let habits = []; // Habit list
+let data = []; // Raw matrix from Google Sheets
+let habits = []; // Habit definitions & entries
+let customDateCols = []; // [{ key: "10-Aug", label: "10-Aug", colIndex: 2, dayName: "Mon", dateObj: Date }]
 let selected = null; // Activity cell {row, col}
-let selectedHabitCell = null; // Habit cell {habitIndex, day}
+let selectedHabitCell = null; // Habit cell {habitIndex, colKey, colIndex}
 let editingHabitIndex = null;
 
 let currentYear = 2026;
@@ -1018,73 +1019,78 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December"
 ];
 
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 /* Default Demo Habits */
 const DEFAULT_HABITS = [
-  { id: "h1", title: "Morning Workout 🏋️", icon: "🏋️", target: "Daily", entries: {
-    "1": {status: "DONE", note: "Upper body session"},
-    "2": {status: "DONE", note: "5km run"},
-    "3": {status: "DONE", note: "HIIT workout"},
-    "4": {status: "MISSED", note: "Rest day"},
-    "5": {status: "DONE", note: "Yoga"},
-    "6": {status: "DONE", note: "Legs workout"},
-    "7": {status: "DONE", note: "Core focus"}
+  { id: "h1", title: "🏋️ Morning Workout", icon: "🏋️", target: "Daily", entries: {
+    "10-Aug": {status: "DONE", note: "Upper body session"},
+    "11-Aug": {status: "DONE", note: "5km run"},
+    "Aug 12": {status: "DONE", note: "HIIT workout"},
+    "Aug 13": {status: "MISSED", note: "Rest day"},
+    "Aug 14": {status: "DONE", note: "Yoga"},
+    "Aug 15": {status: "DONE", note: "Legs workout"}
   }},
-  { id: "h2", title: "Read 20 Pages 📚", icon: "📚", target: "Daily", entries: {
-    "1": {status: "DONE", note: "Ch 4 Atomic Habits"},
-    "2": {status: "DONE", note: "Ch 5 Atomic Habits"},
-    "3": {status: "DONE", note: "Ch 6"},
-    "4": {status: "DONE", note: "Read 30 mins"},
-    "5": {status: "MISSED", note: "Busy schedule"},
-    "6": {status: "DONE", note: "Ch 7"},
-    "7": {status: "DONE", note: "Ch 8"}
+  { id: "h2", title: "📚 Read 20 Pages", icon: "📚", target: "Daily", entries: {
+    "10-Aug": {status: "DONE", note: "Ch 4 Atomic Habits"},
+    "11-Aug": {status: "DONE", note: "Ch 5 Atomic Habits"},
+    "Aug 12": {status: "DONE", note: "Ch 6"},
+    "Aug 13": {status: "DONE", note: "Read 30 mins"},
+    "Aug 14": {status: "MISSED", note: "Busy schedule"},
+    "Aug 15": {status: "DONE", note: "Ch 7"}
   }},
-  { id: "h3", title: "Meditation 🧘", icon: "🧘", target: "Daily", entries: {
-    "1": {status: "DONE", note: "10 min breathwork"},
-    "2": {status: "DONE", note: "15 min mindfulness"},
-    "3": {status: "DONE", note: "Relaxation"},
-    "4": {status: "DONE", note: "10 mins"},
-    "5": {status: "DONE", note: "10 mins"},
-    "6": {status: "MISSED", note: "Skipped morning"},
-    "7": {status: "DONE", note: "Reset session"}
+  { id: "h3", title: "🧘 Meditation & Breathwork", icon: "🧘", target: "Daily", entries: {
+    "10-Aug": {status: "DONE", note: "10 min breathwork"},
+    "11-Aug": {status: "DONE", note: "15 min mindfulness"},
+    "Aug 12": {status: "DONE", note: "Relaxation"},
+    "Aug 13": {status: "DONE", note: "10 mins"},
+    "Aug 14": {status: "DONE", note: "10 mins"},
+    "Aug 15": {status: "MISSED", note: "Skipped morning"}
   }},
-  { id: "h4", title: "Code & Build Projects 💻", icon: "💻", target: "6x / week", entries: {
-    "1": {status: "DONE", note: "Built Habit Features"},
-    "2": {status: "DONE", note: "Added Streaks logic"},
-    "3": {status: "DONE", note: "Google API sync"},
-    "4": {status: "DONE", note: "Refactored UI"},
-    "5": {status: "DONE", note: "Dashboard charts"},
-    "6": {status: "DONE", note: "UI polish"},
-    "7": {status: "SKIP", note: "Weekend break"}
+  { id: "h4", title: "💻 Code & Build Projects", icon: "💻", target: "6x/week", entries: {
+    "10-Aug": {status: "DONE", note: "Built Habit Features"},
+    "11-Aug": {status: "DONE", note: "Added Streaks logic"},
+    "Aug 12": {status: "DONE", note: "Google API sync"},
+    "Aug 13": {status: "DONE", note: "Refactored UI"},
+    "Aug 14": {status: "DONE", note: "Dashboard charts"},
+    "Aug 15": {status: "DONE", note: "UI polish"}
   }},
-  { id: "h5", title: "Drink 3L Water 💧", icon: "💧", target: "Daily", entries: {
-    "1": {status: "DONE", note: "3.5L total"},
-    "2": {status: "DONE", note: "3L reached"},
-    "3": {status: "MISSED", note: "1.5L only"},
-    "4": {status: "DONE", note: "3L reached"},
-    "5": {status: "DONE", note: "3L reached"},
-    "6": {status: "DONE", note: "3.2L"},
-    "7": {status: "DONE", note: "3L"}
+  { id: "h5", title: "💧 Drink 3L Water", icon: "💧", target: "Daily", entries: {
+    "10-Aug": {status: "DONE", note: "3.5L total"},
+    "11-Aug": {status: "DONE", note: "3L reached"},
+    "Aug 12": {status: "MISSED", note: "1.5L only"},
+    "Aug 13": {status: "DONE", note: "3L reached"},
+    "Aug 14": {status: "DONE", note: "3L reached"},
+    "Aug 15": {status: "DONE", note: "3.2L"}
+  }},
+  { id: "h6", title: "🍎 Healthy Meals / No Sugar", icon: "🍎", target: "Daily", entries: {
+    "10-Aug": {status: "DONE", note: "Clean diet"},
+    "11-Aug": {status: "MISSED", note: "Sugar cheat"},
+    "Aug 12": {status: "DONE", note: "Clean diet"},
+    "Aug 13": {status: "DONE", note: "Clean diet"},
+    "Aug 14": {status: "DONE", note: "Clean diet"},
+    "Aug 15": {status: "DONE", note: "Clean diet"}
+  }},
+  { id: "h7", title: "😴 8 Hours Sleep", icon: "😴", target: "Daily", entries: {
+    "10-Aug": {status: "DONE", note: "8h 15m"},
+    "11-Aug": {status: "DONE", note: "8h"},
+    "Aug 12": {status: "DONE", note: "8h 30m"},
+    "Aug 13": {status: "DONE", note: "8h"},
+    "Aug 14": {status: "MISSED", note: "Late night work"},
+    "Aug 15": {status: "DONE", note: "8h 10m"}
   }}
 ];
+
+const DEFAULT_DATE_COLS = ["10-Aug", "11-Aug", "Aug 12", "Aug 13", "Aug 14", "Aug 15"];
 
 /* Default Activity Schedule Data */
 const INITIAL_ACTIVITY_DATA = {
   "Daily Activity Planner": [
-    ["TIME", "18-Aug", "19-Aug", "20-Aug", "21-Aug", "22-Aug", "23-Aug", "24-Aug"],
-    ["9-10 AM", "Client Standup", "Architecture Review", "Team Sync", "Sprint Demo", "Client Standup", "Planning", "Product Review"],
-    ["10-11 AM", "Feature Dev", "PR Review", "Documentation", "Bug Fixing", "Feature Dev", "PR Review", "Feature Dev"],
-    ["11-12 PM", "Break / Coffee", "Break", "Code Review", "Break", "Break", "Team Lunch", "Break"],
-    ["12-1 PM", "Backend API", "API Integration", "Database Migration", "UI Design", "Backend API", "API Work", "Deployment"]
-  ],
-  "Daily Focus": [
-    ["TIME", "18-Aug", "19-Aug", "20-Aug"],
-    ["Morning Focus", "Deep Work", "Deep Work", "Planning"],
-    ["Afternoon Focus", "Code Optimization", "Security Audit", "Release Prep"]
-  ],
-  "Manage Conflict": [
-    ["TIME", "18-Aug", "19-Aug", "20-Aug"],
-    ["Issue 1", "Resolved API mismatch", "Verified fix", "Closed ticket"],
-    ["Issue 2", "In Progress", "Code review pending", "Merged to main"]
+    ["TIME", "10-Aug", "11-Aug", "Aug 12", "Aug 13", "Aug 14", "Aug 15"],
+    ["9-10 AM", "Client Standup", "Architecture Review", "Team Sync", "Sprint Demo", "Client Standup", "Planning"],
+    ["10-11 AM", "Feature Dev", "PR Review", "Documentation", "Bug Fixing", "Feature Dev", "PR Review"],
+    ["11-12 PM", "Break / Coffee", "Break", "Code Review", "Break", "Break", "Team Lunch"],
+    ["12-1 PM", "Backend API", "API Integration", "Database Migration", "UI Design", "Backend API", "API Work"]
   ]
 };
 
@@ -1117,6 +1123,37 @@ function initMonthPicker() {
 
 function getDaysInCurrentMonth() {
   return new Date(currentYear, currentMonth + 1, 0).getDate();
+}
+
+/* Parse custom date headers like "10-Aug", "Aug 12", "13 Aug", "14-08-2026" */
+function parseCustomDateHeader(headerText) {
+  if (!headerText) return { label: "Date", dayName: "", isToday: false, monthIndex: currentMonth };
+  const str = String(headerText).trim();
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  let detectedMonth = currentMonth;
+  MONTH_SHORT.forEach((mStr, idx) => {
+    if (str.toLowerCase().includes(mStr.toLowerCase())) detectedMonth = idx;
+  });
+
+  // Try extracting number
+  const numMatch = str.match(/\d+/);
+  const dayNum = numMatch ? parseInt(numMatch[0], 10) : 1;
+
+  const dateObj = new Date(currentYear, detectedMonth, dayNum);
+  const dayName = !isNaN(dateObj.getTime()) ? weekdays[dateObj.getDay()] : "";
+
+  const today = new Date();
+  const isToday = (today.getFullYear() === currentYear && today.getMonth() === detectedMonth && today.getDate() === dayNum);
+
+  return {
+    label: str,
+    dayNum,
+    dayName,
+    isToday,
+    monthIndex: detectedMonth,
+    dateObj
+  };
 }
 
 /* ================= GOOGLE AUTH & API ================= */
@@ -1184,7 +1221,6 @@ async function loadSheet() {
     const rawValues = res.values || [];
 
     if (rawValues.length > 0) {
-      // 1. Load Activity Matrix
       let maxCols = Math.max(...rawValues.map(row => row.length));
       data = rawValues.map(row => {
         const copy = [...row];
@@ -1192,31 +1228,52 @@ async function loadSheet() {
         return copy;
       });
 
-      // 2. Parse Habits from Sheet Rows
+      // Parse Header Row for Custom Date Columns
+      const headerRow = rawValues[0] || [];
+      const startColIndex = (headerRow[1] && (headerRow[1].toLowerCase().includes("target") || headerRow[1].toLowerCase().includes("goal") || headerRow[1].toLowerCase().includes("freq"))) ? 2 : 1;
+
+      customDateCols = [];
+      for (let c = startColIndex; c < headerRow.length; c++) {
+        if (headerRow[c] && headerRow[c].trim()) {
+          customDateCols.push({
+            colIndex: c,
+            key: headerRow[c].trim(),
+            ...parseCustomDateHeader(headerRow[c].trim())
+          });
+        }
+      }
+
+      // Auto-detect Month from Custom Date Headers
+      if (customDateCols.length > 0 && customDateCols[0].monthIndex !== undefined) {
+        currentMonth = customDateCols[0].monthIndex;
+        document.getElementById("monthSelect").value = `${currentYear}-${currentMonth}`;
+      }
+
+      // Parse Habits
       habits = [];
-      const numDays = getDaysInCurrentMonth();
       for (let r = 1; r < rawValues.length; r++) {
         const row = rawValues[r];
         if (!row || !row[0]) continue;
         const habitTitle = row[0] || "Habit";
-        const habitTarget = row[1] || "Daily";
+        const habitTarget = (startColIndex === 2 && row[1]) ? row[1] : "Daily";
         const icon = habitTitle.match(/(\p{Extended_Pictographic})/u)?.[0] || "🎯";
         const entries = {};
 
-        // Auto-detect whether Col 1 is Target or Day 1
-        const startColIndex = (row[1] && (row[1].includes("/") || row[1].toLowerCase().includes("daily") || row[1].toLowerCase().includes("week"))) ? 2 : 1;
-
-        for (let d = 1; d <= numDays; d++) {
-          const rawCell = row[d - 1 + startColIndex] || "";
+        customDateCols.forEach(colInfo => {
+          const rawCell = row[colInfo.colIndex] || "";
           const parsed = parseHabitCell(rawCell);
-          if (parsed.status !== "PENDING" || parsed.note) entries[d] = parsed;
-        }
+          if (parsed.status !== "PENDING" || parsed.note) {
+            entries[colInfo.key] = parsed;
+          }
+        });
+
         habits.push({ id: "h_" + r + "_" + Date.now(), title: habitTitle, icon, target: habitTarget, entries });
       }
     }
 
     if (!habits.length) habits = JSON.parse(JSON.stringify(DEFAULT_HABITS));
-    if (!data.length) data = INITIAL_ACTIVITY_DATA[currentSheet] || [["TIME", "18-Aug", "19-Aug"], ["9-10 AM", "", ""]];
+    if (!data.length) data = INITIAL_ACTIVITY_DATA[currentSheet] || [["TIME", "10-Aug", "11-Aug"], ["9-10 AM", "", ""]];
+    if (!customDateCols.length) buildDefaultCustomDateCols();
 
     saveLocalState();
     render();
@@ -1225,6 +1282,20 @@ async function loadSheet() {
   } catch (e) {
     setSync("Sync Error", "error");
     toast("Sync error: " + e.message);
+  }
+}
+
+function buildDefaultCustomDateCols() {
+  const headerRow = (data && data.length > 0) ? data[0] : ["HABIT", "TARGET", ...DEFAULT_DATE_COLS];
+  const startColIndex = (headerRow[1] && (headerRow[1].toLowerCase().includes("target") || headerRow[1].toLowerCase().includes("goal"))) ? 2 : 1;
+  customDateCols = [];
+  for (let c = startColIndex; c < headerRow.length; c++) {
+    const label = headerRow[c] || `Day ${c}`;
+    customDateCols.push({
+      colIndex: c,
+      key: label,
+      ...parseCustomDateHeader(label)
+    });
   }
 }
 
@@ -1246,9 +1317,9 @@ function loadLocalState() {
   const savedHabits = localStorage.getItem(getStorageKey("habits"));
 
   if (savedData) {
-    try { data = JSON.parse(savedData); } catch(e){ data = INITIAL_ACTIVITY_DATA[currentSheet] || [["TIME", "18-Aug", "19-Aug"], ["9-10 AM", "", ""]]; }
+    try { data = JSON.parse(savedData); } catch(e){ data = INITIAL_ACTIVITY_DATA[currentSheet] || [["TIME", "10-Aug", "11-Aug"], ["9-10 AM", "", ""]]; }
   } else {
-    data = INITIAL_ACTIVITY_DATA[currentSheet] || [["TIME", "18-Aug", "19-Aug"], ["9-10 AM", "", ""]];
+    data = INITIAL_ACTIVITY_DATA[currentSheet] || [["TIME", "10-Aug", "11-Aug"], ["9-10 AM", "", ""]];
   }
 
   if (savedHabits) {
@@ -1256,6 +1327,8 @@ function loadLocalState() {
   } else {
     habits = JSON.parse(JSON.stringify(DEFAULT_HABITS));
   }
+
+  buildDefaultCustomDateCols();
 }
 
 function saveLocalState() {
@@ -1316,21 +1389,21 @@ function render() {
 function renderHabitWorkspace() {
   const monthTitle = `${MONTH_NAMES[currentMonth]} ${currentYear}`;
   document.getElementById("heroTitle").textContent = `${currentSheet} - Habit Tracker`;
-  document.getElementById("heroTabType").textContent = "🔥 Habit Checkmark & Status Mode";
+  document.getElementById("heroTabType").textContent = "🔥 Habit Checkmark & Dynamic Date Mode";
   document.getElementById("heroDesc").textContent = "Track daily checkmarks, build consistency streaks, analyze weekly & monthly progress, and add date notes. Synchronized in real-time with Google Sheets.";
 
   const heroBtns = document.getElementById("heroActionBtns");
   heroBtns.innerHTML = `
     <button class="btn success" onclick="openAddHabitModal()">＋ Add New Habit</button>
-    <button class="btn primary" onclick="toggleAnalyticsView()">📈 Analytics Dashboard</button>
+    <button class="btn primary" onclick="addCustomDateColPrompt()">＋ Add Custom Date Column</button>
+    <button class="btn" onclick="toggleAnalyticsView()">📈 Analytics Dashboard</button>
   `;
 
   document.getElementById("syncCardHeading").textContent = "Overall Consistency";
   document.getElementById("overallPctBadge").style.display = "inline-block";
 
   // Calculate Habit Stats
-  const daysInMonth = getDaysInCurrentMonth();
-  let totalPossible = habits.length * daysInMonth;
+  let totalPossible = habits.length * Math.max(1, customDateCols.length);
   let totalDone = 0;
   let totalMissed = 0;
   let longestStreak = 0;
@@ -1366,7 +1439,7 @@ function renderHabitWorkspace() {
 
   document.getElementById("stat3Label").textContent = "Active Habits";
   document.getElementById("stat3Val").textContent = habits.length;
-  document.getElementById("stat3Sub").textContent = "Tracking targets";
+  document.getElementById("stat3Sub").textContent = `${customDateCols.length} Date Columns`;
 
   document.getElementById("stat4Label").textContent = "Best Record";
   document.getElementById("stat4Val").textContent = `${bestRecord}d`;
@@ -1386,6 +1459,7 @@ function renderHabitToolbar() {
 
   const btns = [
     { text: "＋ Add Habit", class: "success", click: openAddHabitModal },
+    { text: "＋ Add Date Column", class: "", click: addCustomDateColPrompt },
     { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet },
     { text: "↻ Refresh", class: "primary", click: refreshAll }
   ];
@@ -1403,13 +1477,9 @@ function renderHabitGrid() {
   const table = document.getElementById("grid");
   table.innerHTML = "";
   document.getElementById("panelHeadTitle").textContent = `${currentSheet} (${MONTH_NAMES[currentMonth]} ${currentYear})`;
-  document.getElementById("panelHeadHint").textContent = "Click cell: 🟢 Completed (✓) ➜ 🔴 Missed (✕) ➜ ⏸️ Skipped ➜ ⚪ Blank | Right-click for Note";
+  document.getElementById("panelHeadHint").textContent = "Click cell to tick: 🟢 Done (✓) ➜ 🔴 Missed (✕) ➜ ⏸️ Skipped ➜ ⚪ Blank | Right-click for Note";
 
-  const daysInMonth = getDaysInCurrentMonth();
   const q = document.getElementById("search").value.toLowerCase();
-  const today = new Date();
-  const isCurrentMonthNow = (today.getFullYear() === currentYear && today.getMonth() === currentMonth);
-  const todayDayNum = today.getDate();
 
   const thead = document.createElement("thead");
   const trHead = document.createElement("tr");
@@ -1423,20 +1493,19 @@ function renderHabitGrid() {
   `;
   trHead.appendChild(thHabit);
 
-  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateObj = new Date(currentYear, currentMonth, d);
-    const dayName = weekdays[dateObj.getDay()];
-    const isToday = isCurrentMonthNow && (d === todayDayNum);
-
+  // Dynamic Date Column Headers
+  customDateCols.forEach((colInfo, colIdx) => {
     const th = document.createElement("th");
-    th.className = "th-date" + (isToday ? " today" : "");
+    th.className = "th-date" + (colInfo.isToday ? " today" : "");
+    th.title = "Double-click to rename date column";
+    th.ondblclick = () => renameDate(colInfo.colIndex + 1);
+
     th.innerHTML = `
-      <div class="th-date-num">${d < 10 ? '0' + d : d}</div>
-      <div class="th-date-day">${dayName}</div>
+      <div class="th-date-num">${escapeHtml(colInfo.label)}</div>
+      <div class="th-date-day">${colInfo.dayName || ''}</div>
     `;
     trHead.appendChild(th);
-  }
+  });
   thead.appendChild(trHead);
   table.appendChild(thead);
 
@@ -1466,14 +1535,14 @@ function renderHabitGrid() {
     `;
     tr.appendChild(tdHabit);
 
-    for (let d = 1; d <= daysInMonth; d++) {
+    customDateCols.forEach((colInfo) => {
       const td = document.createElement("td");
-      const entry = habit.entries[d] || { status: "PENDING", note: "" };
+      const entry = habit.entries[colInfo.key] || { status: "PENDING", note: "" };
       const statusClass = entry.status.toLowerCase();
 
       const cellDiv = document.createElement("div");
       cellDiv.className = `cell-habit ${statusClass}`;
-      cellDiv.title = `Day ${d}: ${entry.status}${entry.note ? ' - Note: ' + entry.note : ''}`;
+      cellDiv.title = `${colInfo.label}: ${entry.status}${entry.note ? ' - Note: ' + entry.note : ''}`;
 
       if (entry.note) {
         const noteDot = document.createElement("span");
@@ -1483,17 +1552,17 @@ function renderHabitGrid() {
 
       cellDiv.onclick = (e) => {
         e.stopPropagation();
-        toggleHabitCellStatus(hIdx, d);
+        toggleHabitCellStatusByKey(hIdx, colInfo.key, colInfo.colIndex);
       };
 
       cellDiv.oncontextmenu = (e) => {
         e.preventDefault();
-        openNoteModal(hIdx, d);
+        openNoteModalByKey(hIdx, colInfo.key, colInfo.label, colInfo.colIndex);
       };
 
       td.appendChild(cellDiv);
       tr.appendChild(td);
-    }
+    });
     tbody.appendChild(tr);
   });
 
@@ -1508,10 +1577,10 @@ function renderHabitGrid() {
   tdFootHead.textContent = "DAILY COMPLETION %";
   trFoot.appendChild(tdFootHead);
 
-  for (let d = 1; d <= daysInMonth; d++) {
+  customDateCols.forEach((colInfo) => {
     let dayDone = 0;
     habits.forEach(h => {
-      if (h.entries[d] && h.entries[d].status === "DONE") dayDone++;
+      if (h.entries[colInfo.key] && h.entries[colInfo.key].status === "DONE") dayDone++;
     });
     const pct = habits.length ? Math.round((dayDone / habits.length) * 100) : 0;
     const tdFoot = document.createElement("td");
@@ -1520,43 +1589,49 @@ function renderHabitGrid() {
     tdFoot.style.color = pct >= 80 ? "var(--green)" : pct >= 50 ? "var(--yellow)" : "var(--muted)";
     tdFoot.textContent = `${pct}%`;
     trFoot.appendChild(tdFoot);
-  }
+  });
 
   tbody.appendChild(trFoot);
   table.appendChild(tbody);
 }
 
-/* Cycle habit cell status: PENDING -> DONE -> MISSED -> SKIP -> PENDING */
-async function toggleHabitCellStatus(habitIndex, day) {
+/* Cycle habit cell status */
+async function toggleHabitCellStatusByKey(habitIndex, colKey, colIndex) {
   const habit = habits[habitIndex];
   if (!habit) return;
 
-  const current = habit.entries[day] || { status: "PENDING", note: "" };
+  const current = habit.entries[colKey] || { status: "PENDING", note: "" };
   let nextStatus = "DONE";
   if (current.status === "PENDING") nextStatus = "DONE";
   else if (current.status === "DONE") nextStatus = "MISSED";
   else if (current.status === "MISSED") nextStatus = "SKIP";
   else if (current.status === "SKIP") nextStatus = "PENDING";
 
-  habit.entries[day] = { status: nextStatus, note: current.note };
+  habit.entries[colKey] = { status: nextStatus, note: current.note };
+
+  // Sync to data matrix
+  if (data[habitIndex + 1]) {
+    data[habitIndex + 1][colIndex] = serializeHabitCell(nextStatus, current.note);
+  }
+
   saveLocalState();
   render();
 
   if (accessToken) {
-    await updateSingleHabitCellInGoogleSheet(habitIndex, day, nextStatus, current.note);
+    await updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, nextStatus, current.note);
   }
 }
 
 /* Calculate Habit Streaks & Stats */
 function calcHabitStats(habit) {
-  const daysInMonth = getDaysInCurrentMonth();
+  const totalCols = customDateCols.length;
   let doneCount = 0;
   let missedCount = 0;
   let bestStreak = 0;
   let tempStreak = 0;
 
-  for (let d = 1; d <= daysInMonth; d++) {
-    const entry = habit.entries[d];
+  customDateCols.forEach((colInfo) => {
+    const entry = habit.entries[colInfo.key];
     const st = entry ? entry.status : "PENDING";
     if (st === "DONE") {
       doneCount++;
@@ -1570,15 +1645,12 @@ function calcHabitStats(habit) {
     } else {
       tempStreak = 0;
     }
-  }
-
-  const todayDate = new Date().getDate();
-  const currentCheckLimit = (currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear())
-    ? todayDate : daysInMonth;
+  });
 
   let activeStreak = 0;
-  for (let d = currentCheckLimit; d >= 1; d--) {
-    const entry = habit.entries[d];
+  for (let c = customDateCols.length - 1; c >= 0; c--) {
+    const colInfo = customDateCols[c];
+    const entry = habit.entries[colInfo.key];
     const st = entry ? entry.status : "PENDING";
     if (st === "DONE") activeStreak++;
     else if (st === "SKIP") continue;
@@ -1590,36 +1662,35 @@ function calcHabitStats(habit) {
     missedCount,
     currentStreak: activeStreak,
     bestStreak,
-    completionPct: Math.round((doneCount / daysInMonth) * 100)
+    completionPct: totalCols > 0 ? Math.round((doneCount / totalCols) * 100) : 0
   };
 }
 
 function renderWeeklyBreakdown() {
   const container = document.getElementById("weeklyBarsContainer");
   container.innerHTML = "";
-  const daysInMonth = getDaysInCurrentMonth();
+  const totalCols = customDateCols.length;
+  const colsPerWeek = Math.max(1, Math.ceil(totalCols / 5));
 
-  const weeks = [
-    { label: "W1 (1-7)", start: 1, end: 7 },
-    { label: "W2 (8-14)", start: 8, end: 14 },
-    { label: "W3 (15-21)", start: 15, end: 21 },
-    { label: "W4 (22-28)", start: 22, end: 28 },
-    { label: `W5 (29-${daysInMonth})`, start: 29, end: daysInMonth }
-  ];
+  for (let w = 0; w < 5; w++) {
+    const startIdx = w * colsPerWeek;
+    const endIdx = Math.min(totalCols, (w + 1) * colsPerWeek);
+    const weekCols = customDateCols.slice(startIdx, endIdx);
 
-  weeks.forEach(w => {
-    let weekPossible = habits.length * (w.end - w.start + 1);
+    let weekPossible = habits.length * weekCols.length;
     let weekDone = 0;
 
-    if (w.start <= daysInMonth) {
+    if (weekCols.length > 0) {
       habits.forEach(h => {
-        for (let d = w.start; d <= w.end && d <= daysInMonth; d++) {
-          if (h.entries[d] && h.entries[d].status === "DONE") weekDone++;
-        }
+        weekCols.forEach(colInfo => {
+          if (h.entries[colInfo.key] && h.entries[colInfo.key].status === "DONE") weekDone++;
+        });
       });
     }
 
     const pct = weekPossible > 0 ? Math.round((weekDone / weekPossible) * 100) : 0;
+    const label = weekCols.length > 0 ? `W${w + 1} (${weekCols[0].label})` : `W${w + 1}`;
+
     const col = document.createElement("div");
     col.className = "weekly-col";
     col.innerHTML = `
@@ -1627,19 +1698,19 @@ function renderWeeklyBreakdown() {
       <div class="weekly-bar-wrap">
         <div class="weekly-bar-fill" style="height:${pct}%"></div>
       </div>
-      <div class="weekly-label">${w.label}</div>
+      <div class="weekly-label" title="${label}">${label}</div>
     `;
     container.appendChild(col);
-  });
+  }
 }
 
 function renderHabitStatusList() {
   const container = document.getElementById("habitStatusList");
   container.innerHTML = "";
-  const todayDay = new Date().getDate();
+  const latestCol = customDateCols.length > 0 ? customDateCols[customDateCols.length - 1] : null;
 
   habits.forEach(h => {
-    const entry = h.entries[todayDay] || { status: "PENDING" };
+    const entry = latestCol ? (h.entries[latestCol.key] || { status: "PENDING" }) : { status: "PENDING" };
     const st = entry.status;
     const badgeClass = st === "DONE" ? "badge-done" : st === "MISSED" ? "badge-missed" : "badge-pending";
     const badgeIcon = st === "DONE" ? "🟢 Completed" : st === "MISSED" ? "🔴 Missed" : "⚪ Pending";
@@ -1658,6 +1729,35 @@ function renderHabitStatusList() {
     `;
     container.appendChild(item);
   });
+}
+
+/* Add Custom Date Column */
+async function addCustomDateColPrompt() {
+  const dateStr = prompt("Enter Custom Date Column Header (e.g. 16-Aug, Aug 17, 18-08-2026):");
+  if (!dateStr) return;
+
+  const colIdx = (data && data.length > 0) ? data[0].length : 2;
+
+  if (!data.length) data.push(["HABIT", "TARGET"]);
+  data[0].push(dateStr);
+  for (let r = 1; r < data.length; r++) data[r].push("");
+
+  buildDefaultCustomDateCols();
+  saveLocalState();
+  render();
+
+  if (accessToken) {
+    const nextColLetter = colName(colIdx + 1);
+    const range = `'${currentSheet}'!${nextColLetter}1`;
+    try {
+      await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ range, values: [[dateStr]] })
+      });
+      toast(`Added column "${dateStr}"`);
+    } catch (e) { alert(e.message); }
+  }
 }
 
 /* ================= ACTIVITY WORKSPACE RENDERER ================= */
@@ -1909,11 +2009,12 @@ async function modalDeleteRow() {
 
 /* Add / Delete Columns & Rows */
 async function addDate() {
-  const date = prompt("Enter Date / Column Header (e.g., 25-Aug):");
+  const date = prompt("Enter Date / Column Header (e.g., 16-Aug, Aug 17):");
   if (!date) return;
   if (!data.length) data.push(["TIME"]);
   data[0].push(date);
   for (let r = 1; r < data.length; r++) data[r].push("");
+  buildDefaultCustomDateCols();
   saveLocalState();
   render();
 
@@ -1956,6 +2057,7 @@ async function addTime() {
 async function deleteColumn(col1Based, colNameText = "") {
   if (!confirm(`Are you sure you want to delete column "${colNameText || col1Based}"?`)) return;
   data.forEach(r => r.splice(col1Based - 1, 1));
+  buildDefaultCustomDateCols();
   saveLocalState();
   render();
 
@@ -2020,6 +2122,7 @@ async function renameDate(col) {
   const value = prompt("Rename date header:", old);
   if (!value) return;
   data[0][col - 1] = value;
+  buildDefaultCustomDateCols();
   saveLocalState();
   render();
 
@@ -2148,13 +2251,13 @@ function deleteCurrentEditingHabit() {
   toast("Habit deleted");
 }
 
-function openNoteModal(habitIndex, day) {
-  selectedHabitCell = { habitIndex, day };
+function openNoteModalByKey(habitIndex, colKey, colLabel, colIndex) {
+  selectedHabitCell = { habitIndex, colKey, colIndex };
   const habit = habits[habitIndex];
-  const entry = habit.entries[day] || { status: "PENDING", note: "" };
+  const entry = habit.entries[colKey] || { status: "PENDING", note: "" };
 
   document.getElementById("nHabitName").value = `${habit.icon || '🎯'} ${habit.title}`;
-  document.getElementById("nDateText").value = `Day ${day} (${MONTH_NAMES[currentMonth]} ${currentYear})`;
+  document.getElementById("nDateText").value = `Column ${colLabel}`;
   document.getElementById("nNoteText").value = entry.note || "";
 
   setNoteStatusUI(entry.status);
@@ -2183,39 +2286,39 @@ function getSelectedNoteStatus() {
 
 async function saveHabitNoteModal() {
   if (!selectedHabitCell) return;
-  const { habitIndex, day } = selectedHabitCell;
+  const { habitIndex, colKey, colIndex } = selectedHabitCell;
   const status = getSelectedNoteStatus();
   const note = document.getElementById("nNoteText").value.trim();
 
-  habits[habitIndex].entries[day] = { status, note };
+  habits[habitIndex].entries[colKey] = { status, note };
   saveLocalState();
   closeNoteModal();
   render();
   toast("Saved entry & note");
 
   if (accessToken) {
-    await updateSingleHabitCellInGoogleSheet(habitIndex, day, status, note);
+    await updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, status, note);
   }
 }
 
 async function clearHabitNoteCell() {
   if (!selectedHabitCell) return;
-  const { habitIndex, day } = selectedHabitCell;
-  habits[habitIndex].entries[day] = { status: "PENDING", note: "" };
+  const { habitIndex, colKey, colIndex } = selectedHabitCell;
+  habits[habitIndex].entries[colKey] = { status: "PENDING", note: "" };
   saveLocalState();
   closeNoteModal();
   render();
   toast("Cell cleared");
 
   if (accessToken) {
-    await updateSingleHabitCellInGoogleSheet(habitIndex, day, "PENDING", "");
+    await updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, "PENDING", "");
   }
 }
 
-/* Single Cell Google Sheets Sync for Habit Tracker */
-async function updateSingleHabitCellInGoogleSheet(habitIndex, day, status, note) {
+/* Single Cell Sync to Google Sheets */
+async function updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, status, note) {
   if (!accessToken) return;
-  const colLetter = colName(day + 2);
+  const colLetter = colName(colIndex + 1);
   const rowNumber = habitIndex + 2;
   const cellRef = `${colLetter}${rowNumber}`;
   const range = `'${currentSheet}'!${cellRef}`;
@@ -2233,17 +2336,16 @@ async function updateSingleHabitCellInGoogleSheet(habitIndex, day, status, note)
 
 async function saveFullHabitsToGoogleSheet() {
   if (!accessToken) return;
-  const daysInMonth = getDaysInCurrentMonth();
   const headers = ["HABIT", "TARGET"];
-  for (let d = 1; d <= daysInMonth; d++) headers.push(String(d));
+  customDateCols.forEach(colInfo => headers.push(colInfo.label));
 
   const rows = [headers];
   habits.forEach(h => {
     const row = [h.title, h.target || "Daily"];
-    for (let d = 1; d <= daysInMonth; d++) {
-      const entry = h.entries[d];
+    customDateCols.forEach(colInfo => {
+      const entry = h.entries[colInfo.key];
       row.push(entry ? serializeHabitCell(entry.status, entry.note) : "");
-    }
+    });
     rows.push(row);
   });
 
@@ -2294,6 +2396,16 @@ function onMonthChange() {
   const [yr, mo] = val.split("-").map(Number);
   currentYear = yr;
   currentMonth = mo;
+
+  // Generate date columns for selected month if standard mode
+  const daysInMonth = getDaysInCurrentMonth();
+  const mShort = MONTH_SHORT[currentMonth];
+  const newCols = [];
+  for (let d = 10; d <= 15; d++) {
+    const label = `${d}-${mShort}`;
+    newCols.push(label);
+  }
+
   render();
 }
 
