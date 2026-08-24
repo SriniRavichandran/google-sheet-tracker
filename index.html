@@ -1168,11 +1168,29 @@ const MONTH_NAMES = [
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /* ================= INIT ================= */
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", async () => {
   initMonthPicker();
   renderTabs();
   render();
-  setSync("Sign In Required", "offline");
+
+  // Restore Google OAuth Session automatically across browser refreshes
+  const savedToken = localStorage.getItem("g_access_token");
+  const expiresAt = localStorage.getItem("g_token_expires");
+
+  if (savedToken && expiresAt && Date.now() < (parseInt(expiresAt, 10) - 60000)) {
+    accessToken = savedToken;
+    document.getElementById("loginBtn").style.display = "none";
+    document.getElementById("logoutBtn").style.display = "inline-flex";
+    setSync("Connected", "online");
+    try {
+      await fetchSheetTabs();
+      await loadSheet();
+    } catch (e) {
+      console.warn("Auto-restore Google session error:", e);
+    }
+  } else {
+    setSync("Sign In Required", "offline");
+  }
 });
 
 function markUserEditing() {
@@ -1282,6 +1300,13 @@ function googleLogin() {
     callback: async r => {
       if (r.error) return alert("OAuth Error: " + JSON.stringify(r));
       accessToken = r.access_token;
+
+      // Store OAuth session token across page refreshes
+      const expiresInSec = r.expires_in ? parseInt(r.expires_in, 10) : 3500;
+      const expiresAt = Date.now() + expiresInSec * 1000;
+      localStorage.setItem("g_access_token", accessToken);
+      localStorage.setItem("g_token_expires", expiresAt);
+
       document.getElementById("loginBtn").style.display = "none";
       document.getElementById("logoutBtn").style.display = "inline-flex";
       setSync("Connected", "online");
@@ -1297,6 +1322,9 @@ function googleLogout() {
     try { google.accounts.oauth2.revoke(accessToken, () => {}); } catch(e){}
   }
   accessToken = null;
+  localStorage.removeItem("g_access_token");
+  localStorage.removeItem("g_token_expires");
+
   data = [];
   habits = [];
   customDateCols = [];
@@ -1318,6 +1346,9 @@ async function api(url, options = {}) {
 
   if (r.status === 401 || r.status === 403) {
     accessToken = null;
+    localStorage.removeItem("g_access_token");
+    localStorage.removeItem("g_token_expires");
+
     document.getElementById("loginBtn").style.display = "inline-flex";
     document.getElementById("logoutBtn").style.display = "none";
     setSync("Session Expired", "error");
@@ -1886,7 +1917,7 @@ async function deleteHabitRowDirect(hIdx) {
   toast(`Removed habit "${h.title}" from Google Sheet`);
 }
 
-/* Auto Next Date Feature: Auto-increment date header directly as a column in current sheet tab */
+/* Auto Next Date Feature: Auto-increment date header as column in CURRENT sheet tab (Does NOT create a new sheet) */
 async function autoIncrementNextDate() {
   if (!accessToken) return googleLogin();
   markUserEditing();
@@ -1912,7 +1943,7 @@ async function autoIncrementNextDate() {
   const dayNumStr = dayNum < 10 ? `0${dayNum}` : `${dayNum}`;
   const nextLabel = `${dayNumStr}-${monthShortStr}`;
 
-  // Update active month dropdown state seamlessly in current sheet tab
+  // Keep tracking in the SAME sheet tab, update currentMonth dropdown if month rolls over
   if (monthIdx !== currentMonth) {
     currentMonth = monthIdx;
     currentYear = nextDateObj.getFullYear();
