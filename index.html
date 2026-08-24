@@ -509,6 +509,7 @@ th:first-child { z-index: 20; background: #0c1b2e; }
 
 /* Dynamic Date Column Header */
 .th-date { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.th-col-ref { font-size: 9px; color: var(--cyan); font-weight: 800; letter-spacing: 0.05em; }
 .th-date-num { font-size: 13px; font-weight: 900; color: #fff; white-space: nowrap; }
 .th-date-day { font-size: 9px; color: var(--muted); text-transform: uppercase; }
 .th-date.today {
@@ -1006,9 +1007,10 @@ let sheetMap = {};
 let viewMode = "habit"; // 'habit' or 'activity'
 let data = []; // Raw matrix from Google Sheets
 let habits = []; // Habit definitions & entries
-let customDateCols = []; // [{ key: "10-Aug", label: "10-Aug", colIndex: 2, dayName: "Mon", dateObj: Date }]
-let selected = null; // Activity cell {row, col}
-let selectedHabitCell = null; // Habit cell {habitIndex, colKey, colIndex}
+let customDateCols = []; // [{ key: "10-Aug", label: "10-Aug", colIndex: 1, colLetter: "B", dayName: "Mon", dateObj: Date }]
+let startColIndex = 1; // 1 = Col B (if no Target col), 2 = Col C (if Target col present)
+let selected = null;
+let selectedHabitCell = null;
 let editingHabitIndex = null;
 
 let currentYear = 2026;
@@ -1086,11 +1088,14 @@ const DEFAULT_DATE_COLS = ["10-Aug", "11-Aug", "Aug 12", "Aug 13", "Aug 14", "Au
 /* Default Activity Schedule Data */
 const INITIAL_ACTIVITY_DATA = {
   "Daily Activity Planner": [
-    ["TIME", "10-Aug", "11-Aug", "Aug 12", "Aug 13", "Aug 14", "Aug 15"],
-    ["9-10 AM", "Client Standup", "Architecture Review", "Team Sync", "Sprint Demo", "Client Standup", "Planning"],
-    ["10-11 AM", "Feature Dev", "PR Review", "Documentation", "Bug Fixing", "Feature Dev", "PR Review"],
-    ["11-12 PM", "Break / Coffee", "Break", "Code Review", "Break", "Break", "Team Lunch"],
-    ["12-1 PM", "Backend API", "API Integration", "Database Migration", "UI Design", "Backend API", "API Work"]
+    ["HABIT", "10-Aug", "11-Aug", "Aug 12", "Aug 13", "Aug 14", "Aug 15"],
+    ["🏋️ Morning Workout", "DONE", "DONE", "DONE", "MISSED", "DONE", "DONE"],
+    ["📚 Read 20 Pages", "DONE", "DONE", "DONE", "DONE", "MISSED", "DONE"],
+    ["🧘 Meditation & Breathwork", "DONE", "DONE", "DONE", "DONE", "DONE", "MISSED"],
+    ["💻 Code & Build Projects", "DONE", "DONE", "DONE", "DONE", "DONE", "DONE"],
+    ["💧 Drink 3L Water", "DONE", "DONE", "MISSED", "DONE", "DONE", "DONE"],
+    ["🍎 Healthy Meals / No Sugar", "DONE", "MISSED", "DONE", "DONE", "DONE", "DONE"],
+    ["😴 8 Hours Sleep", "DONE", "DONE", "DONE", "DONE", "MISSED", "DONE"]
   ]
 };
 
@@ -1125,9 +1130,9 @@ function getDaysInCurrentMonth() {
   return new Date(currentYear, currentMonth + 1, 0).getDate();
 }
 
-/* Parse custom date headers like "10-Aug", "Aug 12", "13 Aug", "14-08-2026" */
+/* Parse custom date headers like "10-Aug", "11-Aug", "Aug 12", "Aug 13", "14 Aug", "15-08-2026" */
 function parseCustomDateHeader(headerText) {
-  if (!headerText) return { label: "Date", dayName: "", isToday: false, monthIndex: currentMonth };
+  if (!headerText) return { label: "Date", dayName: "", isToday: false, monthIndex: currentMonth, dayNum: 1 };
   const str = String(headerText).trim();
   const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -1136,7 +1141,6 @@ function parseCustomDateHeader(headerText) {
     if (str.toLowerCase().includes(mStr.toLowerCase())) detectedMonth = idx;
   });
 
-  // Try extracting number
   const numMatch = str.match(/\d+/);
   const dayNum = numMatch ? parseInt(numMatch[0], 10) : 1;
 
@@ -1154,6 +1158,16 @@ function parseCustomDateHeader(headerText) {
     monthIndex: detectedMonth,
     dateObj
   };
+}
+
+/* Detect Column Alignment (Col B is Date vs Col B is Target) */
+function detectStartColIndex(headerRow) {
+  if (!headerRow || headerRow.length < 2) return 1;
+  const col1 = String(headerRow[1] || "").toLowerCase().trim();
+  if (col1.includes("target") || col1.includes("goal") || col1.includes("freq") || col1.includes("category")) {
+    return 2; // Date starts at Col C (Index 2)
+  }
+  return 1; // Date starts at Col B (Index 1) - Matching user's exact screenshot!
 }
 
 /* ================= GOOGLE AUTH & API ================= */
@@ -1228,28 +1242,28 @@ async function loadSheet() {
         return copy;
       });
 
-      // Parse Header Row for Custom Date Columns
+      // Header row & Start Column Alignment
       const headerRow = rawValues[0] || [];
-      const startColIndex = (headerRow[1] && (headerRow[1].toLowerCase().includes("target") || headerRow[1].toLowerCase().includes("goal") || headerRow[1].toLowerCase().includes("freq"))) ? 2 : 1;
+      startColIndex = detectStartColIndex(headerRow);
 
       customDateCols = [];
       for (let c = startColIndex; c < headerRow.length; c++) {
         if (headerRow[c] && headerRow[c].trim()) {
           customDateCols.push({
             colIndex: c,
+            colLetter: colName(c + 1),
             key: headerRow[c].trim(),
             ...parseCustomDateHeader(headerRow[c].trim())
           });
         }
       }
 
-      // Auto-detect Month from Custom Date Headers
       if (customDateCols.length > 0 && customDateCols[0].monthIndex !== undefined) {
         currentMonth = customDateCols[0].monthIndex;
         document.getElementById("monthSelect").value = `${currentYear}-${currentMonth}`;
       }
 
-      // Parse Habits
+      // Parse Habits with exact alignment
       habits = [];
       for (let r = 1; r < rawValues.length; r++) {
         const row = rawValues[r];
@@ -1272,7 +1286,7 @@ async function loadSheet() {
     }
 
     if (!habits.length) habits = JSON.parse(JSON.stringify(DEFAULT_HABITS));
-    if (!data.length) data = INITIAL_ACTIVITY_DATA[currentSheet] || [["TIME", "10-Aug", "11-Aug"], ["9-10 AM", "", ""]];
+    if (!data.length) data = INITIAL_ACTIVITY_DATA[currentSheet] || [["HABIT", "10-Aug", "11-Aug"], ["🏋️ Morning Workout", "", ""]];
     if (!customDateCols.length) buildDefaultCustomDateCols();
 
     saveLocalState();
@@ -1286,13 +1300,14 @@ async function loadSheet() {
 }
 
 function buildDefaultCustomDateCols() {
-  const headerRow = (data && data.length > 0) ? data[0] : ["HABIT", "TARGET", ...DEFAULT_DATE_COLS];
-  const startColIndex = (headerRow[1] && (headerRow[1].toLowerCase().includes("target") || headerRow[1].toLowerCase().includes("goal"))) ? 2 : 1;
+  const headerRow = (data && data.length > 0) ? data[0] : ["HABIT", ...DEFAULT_DATE_COLS];
+  startColIndex = detectStartColIndex(headerRow);
   customDateCols = [];
   for (let c = startColIndex; c < headerRow.length; c++) {
     const label = headerRow[c] || `Day ${c}`;
     customDateCols.push({
       colIndex: c,
+      colLetter: colName(c + 1),
       key: label,
       ...parseCustomDateHeader(label)
     });
@@ -1317,9 +1332,9 @@ function loadLocalState() {
   const savedHabits = localStorage.getItem(getStorageKey("habits"));
 
   if (savedData) {
-    try { data = JSON.parse(savedData); } catch(e){ data = INITIAL_ACTIVITY_DATA[currentSheet] || [["TIME", "10-Aug", "11-Aug"], ["9-10 AM", "", ""]]; }
+    try { data = JSON.parse(savedData); } catch(e){ data = INITIAL_ACTIVITY_DATA[currentSheet] || [["HABIT", "10-Aug", "11-Aug"], ["🏋️ Morning Workout", "", ""]]; }
   } else {
-    data = INITIAL_ACTIVITY_DATA[currentSheet] || [["TIME", "10-Aug", "11-Aug"], ["9-10 AM", "", ""]];
+    data = INITIAL_ACTIVITY_DATA[currentSheet] || [["HABIT", "10-Aug", "11-Aug"], ["🏋️ Morning Workout", "", ""]];
   }
 
   if (savedHabits) {
@@ -1389,13 +1404,13 @@ function render() {
 function renderHabitWorkspace() {
   const monthTitle = `${MONTH_NAMES[currentMonth]} ${currentYear}`;
   document.getElementById("heroTitle").textContent = `${currentSheet} - Habit Tracker`;
-  document.getElementById("heroTabType").textContent = "🔥 Habit Checkmark & Dynamic Date Mode";
-  document.getElementById("heroDesc").textContent = "Track daily checkmarks, build consistency streaks, analyze weekly & monthly progress, and add date notes. Synchronized in real-time with Google Sheets.";
+  document.getElementById("heroTabType").textContent = "🔥 Habit Checkmark & Auto-Date Mode";
+  document.getElementById("heroDesc").textContent = "Track daily checkmarks, build consistency streaks, analyze weekly & monthly progress, auto-increment dates, and add date notes. Synchronized in real-time with Google Sheets.";
 
   const heroBtns = document.getElementById("heroActionBtns");
   heroBtns.innerHTML = `
     <button class="btn success" onclick="openAddHabitModal()">＋ Add New Habit</button>
-    <button class="btn primary" onclick="addCustomDateColPrompt()">＋ Add Custom Date Column</button>
+    <button class="btn primary" onclick="autoIncrementNextDate()">⏩ Auto Next Date</button>
     <button class="btn" onclick="toggleAnalyticsView()">📈 Analytics Dashboard</button>
   `;
 
@@ -1459,7 +1474,8 @@ function renderHabitToolbar() {
 
   const btns = [
     { text: "＋ Add Habit", class: "success", click: openAddHabitModal },
-    { text: "＋ Add Date Column", class: "", click: addCustomDateColPrompt },
+    { text: "⏩ Auto Next Date", class: "primary", click: autoIncrementNextDate },
+    { text: "📅 Populate Month (1-31)", class: "", click: populateFullMonthDates },
     { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet },
     { text: "↻ Refresh", class: "primary", click: refreshAll }
   ];
@@ -1487,20 +1503,21 @@ function renderHabitGrid() {
   const thHabit = document.createElement("th");
   thHabit.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;">
-      <span>HABIT TRACKER</span>
+      <span>HABIT (COL A)</span>
       <span style="color:var(--muted);font-size:10px;">${habits.length} HABITS</span>
     </div>
   `;
   trHead.appendChild(thHabit);
 
-  // Dynamic Date Column Headers
-  customDateCols.forEach((colInfo, colIdx) => {
+  // Dynamic Date Column Headers aligned with exact Google Sheets column letters
+  customDateCols.forEach((colInfo) => {
     const th = document.createElement("th");
     th.className = "th-date" + (colInfo.isToday ? " today" : "");
-    th.title = "Double-click to rename date column";
+    th.title = `Google Sheet Column ${colInfo.colLetter} - Double-click to rename`;
     th.ondblclick = () => renameDate(colInfo.colIndex + 1);
 
     th.innerHTML = `
+      <div class="th-col-ref">COL ${colInfo.colLetter}</div>
       <div class="th-date-num">${escapeHtml(colInfo.label)}</div>
       <div class="th-date-day">${colInfo.dayName || ''}</div>
     `;
@@ -1542,7 +1559,7 @@ function renderHabitGrid() {
 
       const cellDiv = document.createElement("div");
       cellDiv.className = `cell-habit ${statusClass}`;
-      cellDiv.title = `${colInfo.label}: ${entry.status}${entry.note ? ' - Note: ' + entry.note : ''}`;
+      cellDiv.title = `Cell ${colInfo.colLetter}${hIdx + 2} (${colInfo.label}): ${entry.status}${entry.note ? ' - Note: ' + entry.note : ''}`;
 
       if (entry.note) {
         const noteDot = document.createElement("span");
@@ -1593,6 +1610,76 @@ function renderHabitGrid() {
 
   tbody.appendChild(trFoot);
   table.appendChild(tbody);
+}
+
+/* Auto Next Date Feature: Auto-increment date header */
+async function autoIncrementNextDate() {
+  let nextDayNum = 1;
+  let monthShort = MONTH_SHORT[currentMonth];
+  let formatPattern = "DD-MMM"; // e.g. "16-Aug" or "Aug 16"
+
+  if (customDateCols.length > 0) {
+    const lastCol = customDateCols[customDateCols.length - 1];
+    nextDayNum = (lastCol.dayNum || 15) + 1;
+    if (lastCol.label.startsWith("Aug ") || lastCol.label.startsWith("Jan ")) {
+      formatPattern = "MMM DD";
+    }
+  }
+
+  const nextLabel = formatPattern === "MMM DD" ? `${monthShort} ${nextDayNum}` : `${nextDayNum}-${monthShort}`;
+  const nextColIdx = (data && data.length > 0) ? data[0].length : 1;
+
+  if (!data.length) data.push(["HABIT"]);
+  data[0].push(nextLabel);
+  for (let r = 1; r < data.length; r++) data[r].push("");
+
+  buildDefaultCustomDateCols();
+  saveLocalState();
+  render();
+
+  toast(`Added date column "${nextLabel}"`);
+
+  if (accessToken) {
+    const nextColLetter = colName(nextColIdx + 1);
+    const range = `'${currentSheet}'!${nextColLetter}1`;
+    try {
+      await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ range, values: [[nextLabel]] })
+      });
+    } catch (e) { alert(e.message); }
+  }
+}
+
+/* Auto-Populate Full Month Dates (1 to 31) */
+async function populateFullMonthDates() {
+  const daysInMonth = getDaysInCurrentMonth();
+  const monthShort = MONTH_SHORT[currentMonth];
+
+  data[0] = ["HABIT"];
+  for (let d = 1; d <= daysInMonth; d++) {
+    const label = d < 10 ? `0${d}-${monthShort}` : `${d}-${monthShort}`;
+    data[0].push(label);
+  }
+
+  // Preserve rows
+  habits.forEach((h, idx) => {
+    const row = [h.title];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const label = data[0][d];
+      const entry = h.entries[label];
+      row.push(entry ? serializeHabitCell(entry.status, entry.note) : "");
+    }
+    data[idx + 1] = row;
+  });
+
+  buildDefaultCustomDateCols();
+  saveLocalState();
+  render();
+
+  if (accessToken) saveFullHabitsToGoogleSheet();
+  toast(`Populated ${daysInMonth} dates for ${MONTH_NAMES[currentMonth]}`);
 }
 
 /* Cycle habit cell status */
@@ -1731,35 +1818,6 @@ function renderHabitStatusList() {
   });
 }
 
-/* Add Custom Date Column */
-async function addCustomDateColPrompt() {
-  const dateStr = prompt("Enter Custom Date Column Header (e.g. 16-Aug, Aug 17, 18-08-2026):");
-  if (!dateStr) return;
-
-  const colIdx = (data && data.length > 0) ? data[0].length : 2;
-
-  if (!data.length) data.push(["HABIT", "TARGET"]);
-  data[0].push(dateStr);
-  for (let r = 1; r < data.length; r++) data[r].push("");
-
-  buildDefaultCustomDateCols();
-  saveLocalState();
-  render();
-
-  if (accessToken) {
-    const nextColLetter = colName(colIdx + 1);
-    const range = `'${currentSheet}'!${nextColLetter}1`;
-    try {
-      await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ range, values: [[dateStr]] })
-      });
-      toast(`Added column "${dateStr}"`);
-    } catch (e) { alert(e.message); }
-  }
-}
-
 /* ================= ACTIVITY WORKSPACE RENDERER ================= */
 function renderActivityWorkspace() {
   document.getElementById("heroTitle").textContent = `${currentSheet} - Activity Schedule`;
@@ -1817,7 +1875,7 @@ function renderActivityWorkspace() {
     div.className = "th-content";
 
     const label = document.createElement("span");
-    label.textContent = v || (c === 0 ? "TIME" : `Column ${c + 1}`);
+    label.textContent = v || (c === 0 ? "HABIT" : `Column ${c + 1}`);
     div.appendChild(label);
 
     if (c > 0) {
@@ -2011,7 +2069,7 @@ async function modalDeleteRow() {
 async function addDate() {
   const date = prompt("Enter Date / Column Header (e.g., 16-Aug, Aug 17):");
   if (!date) return;
-  if (!data.length) data.push(["TIME"]);
+  if (!data.length) data.push(["HABIT"]);
   data[0].push(date);
   for (let r = 1; r < data.length; r++) data[r].push("");
   buildDefaultCustomDateCols();
@@ -2033,7 +2091,7 @@ async function addDate() {
 }
 
 async function addTime() {
-  const time = prompt("Enter Time Slot (e.g., 1-2 PM):");
+  const time = prompt("Enter Habit / Row Name:");
   if (!time) return;
   const width = data.length > 0 ? data[0].length : 2;
   const newRow = [time, ...Array(width - 1).fill("")];
@@ -2227,9 +2285,12 @@ function saveHabitForm() {
     habits[editingHabitIndex].title = title;
     habits[editingHabitIndex].icon = icon;
     habits[editingHabitIndex].target = target;
+    data[editingHabitIndex + 1][0] = title;
     toast("Habit updated");
   } else {
     habits.push({ id: "h_" + Date.now(), title, icon, target, entries: {} });
+    const width = data[0] ? data[0].length : 2;
+    data.push([title, ...Array(width - 1).fill("")]);
     toast("Habit created");
   }
 
@@ -2244,6 +2305,7 @@ function deleteCurrentEditingHabit() {
   if (editingHabitIndex === null) return;
   if (!confirm(`Delete habit "${habits[editingHabitIndex].title}"?`)) return;
   habits.splice(editingHabitIndex, 1);
+  data.splice(editingHabitIndex + 1, 1);
   saveLocalState();
   closeHabitModal();
   render();
@@ -2257,7 +2319,7 @@ function openNoteModalByKey(habitIndex, colKey, colLabel, colIndex) {
   const entry = habit.entries[colKey] || { status: "PENDING", note: "" };
 
   document.getElementById("nHabitName").value = `${habit.icon || '🎯'} ${habit.title}`;
-  document.getElementById("nDateText").value = `Column ${colLabel}`;
+  document.getElementById("nDateText").value = `Column ${colName(colIndex + 1)} (${colLabel})`;
   document.getElementById("nNoteText").value = entry.note || "";
 
   setNoteStatusUI(entry.status);
@@ -2291,6 +2353,10 @@ async function saveHabitNoteModal() {
   const note = document.getElementById("nNoteText").value.trim();
 
   habits[habitIndex].entries[colKey] = { status, note };
+  if (data[habitIndex + 1]) {
+    data[habitIndex + 1][colIndex] = serializeHabitCell(status, note);
+  }
+
   saveLocalState();
   closeNoteModal();
   render();
@@ -2305,6 +2371,10 @@ async function clearHabitNoteCell() {
   if (!selectedHabitCell) return;
   const { habitIndex, colKey, colIndex } = selectedHabitCell;
   habits[habitIndex].entries[colKey] = { status: "PENDING", note: "" };
+  if (data[habitIndex + 1]) {
+    data[habitIndex + 1][colIndex] = "";
+  }
+
   saveLocalState();
   closeNoteModal();
   render();
@@ -2315,7 +2385,7 @@ async function clearHabitNoteCell() {
   }
 }
 
-/* Single Cell Sync to Google Sheets */
+/* Single Cell Sync to Google Sheets with exact column letter ref */
 async function updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, status, note) {
   if (!accessToken) return;
   const colLetter = colName(colIndex + 1);
@@ -2336,12 +2406,12 @@ async function updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, status, 
 
 async function saveFullHabitsToGoogleSheet() {
   if (!accessToken) return;
-  const headers = ["HABIT", "TARGET"];
+  const headers = (startColIndex === 2) ? ["HABIT", "TARGET"] : ["HABIT"];
   customDateCols.forEach(colInfo => headers.push(colInfo.label));
 
   const rows = [headers];
   habits.forEach(h => {
-    const row = [h.title, h.target || "Daily"];
+    const row = (startColIndex === 2) ? [h.title, h.target || "Daily"] : [h.title];
     customDateCols.forEach(colInfo => {
       const entry = h.entries[colInfo.key];
       row.push(entry ? serializeHabitCell(entry.status, entry.note) : "");
@@ -2396,16 +2466,6 @@ function onMonthChange() {
   const [yr, mo] = val.split("-").map(Number);
   currentYear = yr;
   currentMonth = mo;
-
-  // Generate date columns for selected month if standard mode
-  const daysInMonth = getDaysInCurrentMonth();
-  const mShort = MONTH_SHORT[currentMonth];
-  const newCols = [];
-  for (let d = 10; d <= 15; d++) {
-    const label = `${d}-${mShort}`;
-    newCols.push(label);
-  }
-
   render();
 }
 
