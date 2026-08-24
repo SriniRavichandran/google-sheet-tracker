@@ -894,7 +894,7 @@ tr.drag-over {
     <div class="logo">4i</div>
     <div class="brand-text">
       <h1>Daily Management & Habit Suite</h1>
-      <small>Google Sheets Connected Workspace <span id="syncBadge" class="sync-badge"><span id="syncDot" class="sync-dot offline"></span> <span id="syncText">Local Mode</span></span></small>
+      <small>Google Sheets Connected Workspace <span id="syncBadge" class="sync-badge"><span id="syncDot" class="sync-dot offline"></span> <span id="syncText">Sign In Required</span></span></small>
     </div>
   </div>
 
@@ -909,7 +909,7 @@ tr.drag-over {
       <!-- Month Options -->
     </select>
 
-    <button id="loginBtn" class="btn" onclick="googleLogin()">
+    <button id="loginBtn" class="btn primary" onclick="googleLogin()">
       <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.761H12.545z"/></svg>
       Sign in with Google
     </button>
@@ -935,7 +935,7 @@ tr.drag-over {
           <span style="background:rgba(53,211,153,0.18);color:var(--green);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:800;" id="heroTabType">🔥 Habit Checkmark Mode</span>
         </div>
         <p class="hero-subtitle" id="heroDesc">
-          Track daily checkmarks, drag & drop to reorder habits, configure target frequencies (Daily, 1x/Week, 1x/Month, 4x/Year), and analyze weekly progress. Real-time synced with Google Sheets.
+          Track daily checkmarks, drag & drop to reorder habits, configure target frequencies (Daily, 1x/Week, 1x/Month, 4x/Year), and analyze weekly progress. 100% online synced with Google Sheets.
         </p>
       </div>
       <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;" id="heroActionBtns">
@@ -953,7 +953,7 @@ tr.drag-over {
         <div class="sync-time">Last Synced: <span id="lastSync">—</span></div>
       </div>
       <div style="margin-top:14px;" id="syncCardExtra">
-        <button class="btn primary" style="width:100%;justify-content:center" onclick="refreshAll()">Refresh Sheet Data</button>
+        <button class="btn primary" style="width:100%;justify-content:center" onclick="refreshAll()">Refresh Google Sheet Data</button>
       </div>
     </div>
   </section>
@@ -1169,9 +1169,9 @@ const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Se
 /* ================= INIT ================= */
 window.addEventListener("DOMContentLoaded", () => {
   initMonthPicker();
-  loadLocalState();
   renderTabs();
   render();
+  setSync("Sign In Required", "offline");
 });
 
 function markUserEditing() {
@@ -1273,16 +1273,22 @@ function googleLogout() {
     try { google.accounts.oauth2.revoke(accessToken, () => {}); } catch(e){}
   }
   accessToken = null;
+  data = [];
+  habits = [];
+  customDateCols = [];
   document.getElementById("loginBtn").style.display = "inline-flex";
   document.getElementById("logoutBtn").style.display = "none";
-  setSync("Local Mode", "offline");
+  setSync("Sign In Required", "offline");
   document.getElementById("lastSync").textContent = "—";
-  toast("Signed out. Using local storage.");
+  toast("Signed out of Google Sheets.");
   render();
 }
 
 async function api(url, options = {}) {
-  if (!accessToken) throw new Error("Please sign in with Google first.");
+  if (!accessToken) {
+    googleLogin();
+    throw new Error("Please sign in with Google to sync with online Google Sheets.");
+  }
   options.headers = { ...options.headers, Authorization: `Bearer ${accessToken}` };
   const r = await fetch(url, options);
 
@@ -1317,9 +1323,12 @@ async function fetchSheetTabs() {
   } catch (e) { console.warn("Could not fetch sheets:", e); }
 }
 
-/* Load Sheet Strictly from Google Sheets API */
+/* Load Sheet Strictly from Google Sheets API - 100% Online */
 async function loadSheet() {
-  if (!accessToken) return setSync("Local Mode", "offline");
+  if (!accessToken) {
+    setSync("Sign In Required", "offline");
+    return;
+  }
   if (isUserEditing) return;
 
   try {
@@ -1382,7 +1391,6 @@ async function loadSheet() {
       data = [["HABIT"]];
     }
 
-    saveLocalState();
     render();
     setSync("Synced", "online");
     document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
@@ -1411,43 +1419,14 @@ function buildDefaultCustomDateCols() {
 }
 
 async function refreshAll() {
+  if (!accessToken) return googleLogin();
   isUserEditing = false;
   await fetchSheetTabs();
   await loadSheet();
-  toast("Refreshed & Synced");
+  toast("Refreshed & Synced with Google Sheet");
 }
 
 setInterval(() => { if (accessToken && !isUserEditing) loadSheet(); }, 30000);
-
-/* ================= LOCAL STORAGE ================= */
-function getStorageKey(type = "data") {
-  return `4iapps_${type}_${currentSheet.replace(/\s+/g, "_")}`;
-}
-
-function loadLocalState() {
-  if (accessToken) return;
-  const savedData = localStorage.getItem(getStorageKey("data"));
-  const savedHabits = localStorage.getItem(getStorageKey("habits"));
-
-  if (savedData) {
-    try { data = JSON.parse(savedData); } catch(e){ data = [["HABIT"]]; }
-  } else {
-    data = [["HABIT"]];
-  }
-
-  if (savedHabits) {
-    try { habits = JSON.parse(savedHabits); } catch(e){ habits = []; }
-  } else {
-    habits = [];
-  }
-
-  buildDefaultCustomDateCols();
-}
-
-function saveLocalState() {
-  localStorage.setItem(getStorageKey("data"), JSON.stringify(data));
-  localStorage.setItem(getStorageKey("habits"), JSON.stringify(habits));
-}
 
 /* ================= TABS ================= */
 function renderTabs() {
@@ -1475,12 +1454,11 @@ function renderTabs() {
 
 function switchSheetTab(name) {
   currentSheet = name;
-  loadLocalState();
   renderTabs();
   if (accessToken) {
     loadSheet();
   } else {
-    render();
+    googleLogin();
   }
 }
 
@@ -1500,11 +1478,45 @@ function render() {
   }
 }
 
+/* Auto Horizontal Scroll to Today's or Selected Month Date Column */
+function scrollToActiveDateColumn() {
+  setTimeout(() => {
+    const tableWrap = document.querySelector('.table-wrap');
+    if (!tableWrap) return;
+
+    // 1. Priority 1: Today's date header column
+    let targetTh = tableWrap.querySelector('th.th-date.today');
+
+    // 2. Priority 2: First date header matching selected month
+    if (!targetTh) {
+      const monthShort = MONTH_SHORT[currentMonth].toLowerCase();
+      const allDateThs = tableWrap.querySelectorAll('th.th-date');
+      for (let th of allDateThs) {
+        if (th.textContent.toLowerCase().includes(monthShort)) {
+          targetTh = th;
+          break;
+        }
+      }
+    }
+
+    if (targetTh) {
+      const scrollLeftPos = targetTh.offsetLeft - (tableWrap.clientWidth / 2) + (targetTh.clientWidth / 2);
+      tableWrap.scrollTo({ left: Math.max(0, scrollLeftPos), behavior: 'smooth' });
+    }
+  }, 120);
+}
+
+/* Filter custom date columns based on selected month dropdown */
+function getActiveMonthDateCols() {
+  const monthCols = customDateCols.filter(col => col.monthIndex === currentMonth);
+  return monthCols.length > 0 ? monthCols : customDateCols;
+}
+
 /* ================= HABIT WORKSPACE RENDERER ================= */
 function renderHabitWorkspace() {
   document.getElementById("heroTitle").textContent = `${currentSheet}`;
   document.getElementById("heroTabType").textContent = "🔥 Habit Checkmark Mode";
-  document.getElementById("heroDesc").textContent = "Track daily checkmarks, drag & drop to reorder habits, configure target frequencies (Daily, 1x/Week, 1x/Month, 4x/Year), and analyze weekly progress. Real-time synced with Google Sheets.";
+  document.getElementById("heroDesc").textContent = "Track daily checkmarks, drag & drop to reorder habits, configure target frequencies (Daily, 1x/Week, 1x/Month, 4x/Year), and analyze weekly progress. 100% online synced with Google Sheets.";
 
   const heroBtns = document.getElementById("heroActionBtns");
   heroBtns.innerHTML = `
@@ -1516,8 +1528,11 @@ function renderHabitWorkspace() {
   document.getElementById("syncCardHeading").textContent = "Overall Consistency";
   document.getElementById("overallPctBadge").style.display = "inline-block";
 
-  // Calculate Habit Stats Dynamically
-  let totalPossible = habits.length * Math.max(1, customDateCols.length);
+  // Filter Date Columns for Selected Month in Dashboard Metrics
+  const activeCols = getActiveMonthDateCols();
+
+  // Calculate Habit Stats Dynamically for Active Month
+  let totalPossible = habits.length * Math.max(1, activeCols.length);
   let totalDone = 0;
   let totalMissed = 0;
   let longestStreak = 0;
@@ -1543,7 +1558,7 @@ function renderHabitWorkspace() {
   const overallPct = totalPossible ? Math.round((totalDone / totalPossible) * 100) : 0;
   document.getElementById("overallPctBadge").textContent = `${overallPct}%`;
 
-  document.getElementById("stat1Label").textContent = "Completion Rate";
+  document.getElementById("stat1Label").textContent = `${MONTH_NAMES[currentMonth]} Completion Rate`;
   document.getElementById("stat1Val").textContent = `${overallPct}%`;
   document.getElementById("stat1Sub").textContent = `${totalDone} 🟢 Done / ${totalMissed} 🔴 Missed`;
 
@@ -1553,7 +1568,7 @@ function renderHabitWorkspace() {
 
   document.getElementById("stat3Label").textContent = "Active Habits";
   document.getElementById("stat3Val").textContent = habits.length;
-  document.getElementById("stat3Sub").textContent = `${customDateCols.length} Date Columns`;
+  document.getElementById("stat3Sub").textContent = `${activeCols.length} Date Columns (${MONTH_SHORT[currentMonth]})`;
 
   document.getElementById("stat4Label").textContent = "Best Record";
   document.getElementById("stat4Val").textContent = `${bestRecord}d`;
@@ -1563,6 +1578,7 @@ function renderHabitWorkspace() {
   renderHabitStatusList();
   renderHabitToolbar();
   renderHabitGrid();
+  scrollToActiveDateColumn();
 }
 
 function renderHabitToolbar() {
@@ -1627,6 +1643,24 @@ function renderHabitGrid() {
 
   const tbody = document.createElement("tbody");
 
+  if (!accessToken) {
+    const trAuth = document.createElement("tr");
+    const tdAuth = document.createElement("td");
+    tdAuth.colSpan = Math.max(1, customDateCols.length + 1);
+    tdAuth.style.padding = "50px 20px";
+    tdAuth.style.textAlign = "center";
+    tdAuth.style.color = "var(--cyan)";
+    tdAuth.innerHTML = `
+      <div style="font-size:16px;font-weight:800;margin-bottom:12px;">🔒 Google Sheets Sign In Required</div>
+      <div style="color:var(--muted);font-size:13px;margin-bottom:18px;">Click below to connect directly with your online Google Sheet.</div>
+      <button class="btn primary" onclick="googleLogin()" style="padding:12px 24px;font-size:14px;">Sign in with Google</button>
+    `;
+    trAuth.appendChild(tdAuth);
+    tbody.appendChild(trAuth);
+    table.appendChild(tbody);
+    return;
+  }
+
   if (habits.length === 0) {
     const trEmpty = document.createElement("tr");
     const tdEmpty = document.createElement("td");
@@ -1635,7 +1669,7 @@ function renderHabitGrid() {
     tdEmpty.style.textAlign = "center";
     tdEmpty.style.color = "var(--muted)";
     tdEmpty.style.fontSize = "14px";
-    tdEmpty.innerHTML = `No habits found in this Google Sheet.<br><br>Click <b style="color:var(--green);cursor:pointer;" onclick="openAddHabitModal()">＋ Add New Habit</b> to start tracking!`;
+    tdEmpty.innerHTML = `No habits found in this online Google Sheet.<br><br>Click <b style="color:var(--green);cursor:pointer;" onclick="openAddHabitModal()">＋ Add New Habit</b> to start tracking!`;
     trEmpty.appendChild(tdEmpty);
     tbody.appendChild(trEmpty);
     table.appendChild(tbody);
@@ -1776,56 +1810,54 @@ function handleDrop(e, targetIdx, tr) {
   }
 
   draggedHabitIdx = null;
-  saveLocalState();
   render();
 
   if (accessToken) saveFullHabitsToGoogleSheet();
-  toast("Reordered habit row");
+  toast("Reordered habit row in Google Sheet");
 }
 
 /* Remove Row Direct Action - Deletes physically from Google Sheets */
 async function deleteHabitRowDirect(hIdx) {
+  if (!accessToken) return googleLogin();
   const h = habits[hIdx];
   if (!h) return;
-  if (!confirm(`Are you sure you want to remove row "${h.title}"?`)) return;
+  if (!confirm(`Are you sure you want to remove row "${h.title}" from Google Sheet?`)) return;
 
   markUserEditing();
   habits.splice(hIdx, 1);
   if (data[hIdx + 1]) data.splice(hIdx + 1, 1);
 
-  saveLocalState();
   render();
 
-  if (accessToken) {
-    const currentSheetId = sheetMap[currentSheet] ?? 0;
-    const row1Based = hIdx + 2; // Row 1 is Header, row 2 is habit 0
-    try {
-      await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          requests: [{
-            deleteDimension: {
-              range: {
-                sheetId: currentSheetId,
-                dimension: "ROWS",
-                startIndex: row1Based - 1,
-                endIndex: row1Based
-              }
+  const currentSheetId = sheetMap[currentSheet] ?? 0;
+  const row1Based = hIdx + 2; // Row 1 is Header, row 2 is habit 0
+  try {
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requests: [{
+          deleteDimension: {
+            range: {
+              sheetId: currentSheetId,
+              dimension: "ROWS",
+              startIndex: row1Based - 1,
+              endIndex: row1Based
             }
-          }]
-        })
-      });
-    } catch (e) {
-      console.warn("deleteDimension error:", e);
-    }
-    await saveFullHabitsToGoogleSheet();
+          }
+        }]
+      })
+    });
+  } catch (e) {
+    console.warn("deleteDimension error:", e);
   }
-  toast(`Removed habit "${h.title}"`);
+  await saveFullHabitsToGoogleSheet();
+  toast(`Removed habit "${h.title}" from Google Sheet`);
 }
 
 /* Auto Next Date Feature: Auto-increment date header dynamically */
 async function autoIncrementNextDate() {
+  if (!accessToken) return googleLogin();
   markUserEditing();
   let nextDayNum = 1;
   let monthShort = MONTH_SHORT[currentMonth];
@@ -1847,27 +1879,24 @@ async function autoIncrementNextDate() {
   for (let r = 1; r < data.length; r++) data[r].push("");
 
   buildDefaultCustomDateCols();
-  saveLocalState();
   render();
 
-  toast(`Added date column "${nextLabel}"`);
-
-  if (accessToken) {
-    const nextColLetter = colName(nextColIdx + 1);
-    const range = `'${currentSheet}'!${nextColLetter}1`;
-    try {
-      await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ range, values: [[nextLabel]] })
-      });
-      document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
-    } catch (e) { alert(e.message); }
-  }
+  const nextColLetter = colName(nextColIdx + 1);
+  const range = `'${currentSheet}'!${nextColLetter}1`;
+  try {
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ range, values: [[nextLabel]] })
+    });
+    document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
+    toast(`Added date column "${nextLabel}" to Google Sheet`);
+  } catch (e) { alert(e.message); }
 }
 
 /* Auto-Populate Full Month Dates (1 to 31) */
 async function populateFullMonthDates() {
+  if (!accessToken) return googleLogin();
   markUserEditing();
   const daysInMonth = getDaysInCurrentMonth();
   const monthShort = MONTH_SHORT[currentMonth].toUpperCase();
@@ -1889,15 +1918,15 @@ async function populateFullMonthDates() {
   });
 
   buildDefaultCustomDateCols();
-  saveLocalState();
   render();
 
-  if (accessToken) await saveFullHabitsToGoogleSheet();
-  toast(`Populated ${daysInMonth} dates for ${MONTH_NAMES[currentMonth]}`);
+  await saveFullHabitsToGoogleSheet();
+  toast(`Populated ${daysInMonth} dates in Google Sheet for ${MONTH_NAMES[currentMonth]}`);
 }
 
 /* Cycle habit cell status */
 async function toggleHabitCellStatusByKey(habitIndex, colKey, colIndex) {
+  if (!accessToken) return googleLogin();
   markUserEditing();
   const habit = habits[habitIndex];
   if (!habit) return;
@@ -1915,23 +1944,20 @@ async function toggleHabitCellStatusByKey(habitIndex, colKey, colIndex) {
     data[habitIndex + 1][colIndex] = serializeHabitCell(nextStatus, current.note);
   }
 
-  saveLocalState();
   render();
-
-  if (accessToken) {
-    await updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, nextStatus, current.note);
-  }
+  await updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, nextStatus, current.note);
 }
 
-/* Calculate Habit Streaks & Stats */
+/* Calculate Habit Streaks & Stats based on Active Month */
 function calcHabitStats(habit) {
-  const totalCols = customDateCols.length;
+  const activeCols = getActiveMonthDateCols();
+  const totalCols = activeCols.length;
   let doneCount = 0;
   let missedCount = 0;
   let bestStreak = 0;
   let tempStreak = 0;
 
-  customDateCols.forEach((colInfo) => {
+  activeCols.forEach((colInfo) => {
     const entry = habit.entries[colInfo.key];
     const st = entry ? entry.status : "PENDING";
     if (st === "DONE") {
@@ -1949,8 +1975,8 @@ function calcHabitStats(habit) {
   });
 
   let activeStreak = 0;
-  for (let c = customDateCols.length - 1; c >= 0; c--) {
-    const colInfo = customDateCols[c];
+  for (let c = activeCols.length - 1; c >= 0; c--) {
+    const colInfo = activeCols[c];
     const entry = habit.entries[colInfo.key];
     const st = entry ? entry.status : "PENDING";
     if (st === "DONE") activeStreak++;
@@ -1970,13 +1996,14 @@ function calcHabitStats(habit) {
 function renderWeeklyBreakdown() {
   const container = document.getElementById("weeklyBarsContainer");
   container.innerHTML = "";
-  const totalCols = customDateCols.length;
+  const activeCols = getActiveMonthDateCols();
+  const totalCols = activeCols.length;
   const colsPerWeek = Math.max(1, Math.ceil(totalCols / 5));
 
   for (let w = 0; w < 5; w++) {
     const startIdx = w * colsPerWeek;
     const endIdx = Math.min(totalCols, (w + 1) * colsPerWeek);
-    const weekCols = customDateCols.slice(startIdx, endIdx);
+    const weekCols = activeCols.slice(startIdx, endIdx);
 
     let weekPossible = habits.length * weekCols.length;
     let weekDone = 0;
@@ -2008,10 +2035,11 @@ function renderWeeklyBreakdown() {
 function renderHabitStatusList() {
   const container = document.getElementById("habitStatusList");
   container.innerHTML = "";
-  const latestCol = customDateCols.length > 0 ? customDateCols[customDateCols.length - 1] : null;
+  const activeCols = getActiveMonthDateCols();
+  const latestCol = activeCols.length > 0 ? activeCols[activeCols.length - 1] : null;
 
   if (habits.length === 0) {
-    container.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px;">No active habits</div>';
+    container.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px;">No active habits in online sheet</div>';
     return;
   }
 
@@ -2222,44 +2250,39 @@ function closeModal() {
 
 async function saveCell() {
   if (!selected) return;
+  if (!accessToken) return googleLogin();
   markUserEditing();
   const value = document.getElementById("mValue").value;
   data[selected.row - 1][selected.col - 1] = value;
-  saveLocalState();
   closeModal();
   render();
-  toast("Saved locally");
 
-  if (accessToken) {
-    const cell = colName(selected.col) + selected.row;
-    const range = `'${currentSheet}'!${cell}`;
-    try {
-      await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ range, majorDimension: "ROWS", values: [[value]] })
-      });
-      document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
-      toast("Synced to Google Sheet");
-    } catch (e) { alert(e.message); }
-  }
+  const cell = colName(selected.col) + selected.row;
+  const range = `'${currentSheet}'!${cell}`;
+  try {
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ range, majorDimension: "ROWS", values: [[value]] })
+    });
+    document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
+    toast("Synced to Google Sheet");
+  } catch (e) { alert(e.message); }
 }
 
 async function clearCellDirect(row, col) {
+  if (!accessToken) return googleLogin();
   markUserEditing();
   data[row - 1][col - 1] = "";
-  saveLocalState();
   render();
 
-  if (accessToken) {
-    const cell = colName(col) + row;
-    const range = `'${currentSheet}'!${cell}`;
-    try {
-      await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}:clear`, { method: "POST" });
-      document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
-      toast(`Cleared ${cell}`);
-    } catch (e) { alert(e.message); }
-  }
+  const cell = colName(col) + row;
+  const range = `'${currentSheet}'!${cell}`;
+  try {
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}:clear`, { method: "POST" });
+    document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
+    toast(`Cleared ${cell} in Google Sheet`);
+  } catch (e) { alert(e.message); }
 }
 
 async function clearSelected() {
@@ -2268,17 +2291,16 @@ async function clearSelected() {
     closeModal();
     return;
   }
+  if (!accessToken) return googleLogin();
   const promptCell = prompt("Enter cell coordinate (e.g. B2, C4):");
   if (!promptCell) return;
   const cleaned = promptCell.trim().toUpperCase();
-  if (accessToken) {
-    const range = `'${currentSheet}'!${cleaned}`;
-    try {
-      await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}:clear`, { method: "POST" });
-      toast(`Cleared ${cleaned}`);
-      loadSheet();
-    } catch (e) { alert(e.message); }
-  }
+  const range = `'${currentSheet}'!${cleaned}`;
+  try {
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}:clear`, { method: "POST" });
+    toast(`Cleared ${cleaned} in Google Sheet`);
+    loadSheet();
+  } catch (e) { alert(e.message); }
 }
 
 async function modalClearCell() {
@@ -2297,6 +2319,7 @@ async function modalDeleteRow() {
 
 /* Add / Delete Columns & Rows */
 async function addDate() {
+  if (!accessToken) return googleLogin();
   markUserEditing();
   const date = prompt("Enter Date / Column Header (e.g., 16-Aug, Aug 17):");
   if (!date) return;
@@ -2304,71 +2327,63 @@ async function addDate() {
   data[0].push(date);
   for (let r = 1; r < data.length; r++) data[r].push("");
   buildDefaultCustomDateCols();
-  saveLocalState();
   render();
 
-  if (accessToken) {
-    const nextColName = colName(data[0].length);
-    const range = `'${currentSheet}'!${nextColName}1`;
-    try {
-      await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ range, values: [[date]] })
-      });
-      document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
-      toast(`Added column "${date}"`);
-    } catch (e) { alert(e.message); }
-  }
+  const nextColName = colName(data[0].length);
+  const range = `'${currentSheet}'!${nextColName}1`;
+  try {
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ range, values: [[date]] })
+    });
+    document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
+    toast(`Added column "${date}" to Google Sheet`);
+  } catch (e) { alert(e.message); }
 }
 
 async function addTime() {
+  if (!accessToken) return googleLogin();
   markUserEditing();
   const time = prompt("Enter Habit / Row Name:");
   if (!time) return;
   const width = data.length > 0 ? data[0].length : 2;
   const newRow = [time, ...Array(width - 1).fill("")];
   data.push(newRow);
-  saveLocalState();
   render();
 
-  if (accessToken) {
-    const range = `'${currentSheet}'!A:A`;
-    try {
-      await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ values: [newRow] })
-      });
-      document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
-      toast(`Added row "${time}"`);
-    } catch (e) { alert(e.message); }
-  }
+  const range = `'${currentSheet}'!A:A`;
+  try {
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ values: [newRow] })
+    });
+    document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
+    toast(`Added row "${time}" to Google Sheet`);
+  } catch (e) { alert(e.message); }
 }
 
 async function deleteColumn(col1Based, colNameText = "") {
-  if (!confirm(`Are you sure you want to delete column "${colNameText || col1Based}"?`)) return;
+  if (!accessToken) return googleLogin();
+  if (!confirm(`Are you sure you want to delete column "${colNameText || col1Based}" from Google Sheet?`)) return;
   markUserEditing();
   data.forEach(r => r.splice(col1Based - 1, 1));
   buildDefaultCustomDateCols();
   render();
 
-  if (accessToken) {
-    const currentSheetId = sheetMap[currentSheet] ?? 0;
-    try {
-      await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          requests: [{ deleteDimension: { range: { sheetId: currentSheetId, dimension: "COLUMNS", startIndex: col1Based - 1, endIndex: col1Based } } }]
-        })
-      });
-      await saveFullHabitsToGoogleSheet();
-      toast(`Deleted column "${colNameText}"`);
-    } catch (e) { alert(e.message); }
-  } else {
-    saveLocalState();
-  }
+  const currentSheetId = sheetMap[currentSheet] ?? 0;
+  try {
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requests: [{ deleteDimension: { range: { sheetId: currentSheetId, dimension: "COLUMNS", startIndex: col1Based - 1, endIndex: col1Based } } }]
+      })
+    });
+    await saveFullHabitsToGoogleSheet();
+    toast(`Deleted column "${colNameText}" from Google Sheet`);
+  } catch (e) { alert(e.message); }
 }
 
 async function deleteColumnPrompt() {
@@ -2382,29 +2397,26 @@ async function deleteColumnPrompt() {
 }
 
 async function deleteRow(row1Based, rowNameText = "") {
-  if (!confirm(`Are you sure you want to delete row "${rowNameText || row1Based}"?`)) return;
+  if (!accessToken) return googleLogin();
+  if (!confirm(`Are you sure you want to delete row "${rowNameText || row1Based}" from Google Sheet?`)) return;
   markUserEditing();
 
   data.splice(row1Based - 1, 1);
   if (habits[row1Based - 2]) habits.splice(row1Based - 2, 1);
   render();
 
-  if (accessToken) {
-    const currentSheetId = sheetMap[currentSheet] ?? 0;
-    try {
-      await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          requests: [{ deleteDimension: { range: { sheetId: currentSheetId, dimension: "ROWS", startIndex: row1Based - 1, endIndex: row1Based } } }]
-        })
-      });
-      await saveFullHabitsToGoogleSheet();
-      toast(`Deleted row "${rowNameText}"`);
-    } catch (e) { alert(e.message); }
-  } else {
-    saveLocalState();
-  }
+  const currentSheetId = sheetMap[currentSheet] ?? 0;
+  try {
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requests: [{ deleteDimension: { range: { sheetId: currentSheetId, dimension: "ROWS", startIndex: row1Based - 1, endIndex: row1Based } } }]
+      })
+    });
+    await saveFullHabitsToGoogleSheet();
+    toast(`Deleted row "${rowNameText}" from Google Sheet`);
+  } catch (e) { alert(e.message); }
 }
 
 async function deleteRowPrompt() {
@@ -2418,31 +2430,30 @@ async function deleteRowPrompt() {
 }
 
 async function renameDate(col) {
+  if (!accessToken) return googleLogin();
   markUserEditing();
   const old = data[0][col - 1] || "";
   const value = prompt("Rename date header:", old);
   if (!value) return;
   data[0][col - 1] = value;
   buildDefaultCustomDateCols();
-  saveLocalState();
   render();
 
-  if (accessToken) {
-    const range = `'${currentSheet}'!${colName(col)}1`;
-    try {
-      await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ range, values: [[value]] })
-      });
-      document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
-      toast("Column renamed");
-    } catch (e) { alert(e.message); }
-  }
+  const range = `'${currentSheet}'!${colName(col)}1`;
+  try {
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ range, values: [[value]] })
+    });
+    document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
+    toast("Column renamed in Google Sheet");
+  } catch (e) { alert(e.message); }
 }
 
 /* Sheet Tab Creation & Deletion */
 async function addNewSheet() {
+  if (!accessToken) return googleLogin();
   markUserEditing();
   const title = prompt("Enter new Sheet Tab name (e.g. Habit Tracker, Weekly Goals):");
   if (!title) return;
@@ -2450,52 +2461,47 @@ async function addNewSheet() {
   currentSheet = title;
   renderTabs();
 
-  if (accessToken) {
-    try {
-      await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requests: [{ addSheet: { properties: { title } } }] })
-      });
-      toast(`Created sheet "${title}"`);
-      await fetchSheetTabs();
-      await saveFullHabitsToGoogleSheet();
-    } catch (e) { alert(e.message); }
-  } else {
-    loadLocalState();
-    render();
-    toast(`Created sheet tab "${title}"`);
-  }
+  try {
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requests: [{ addSheet: { properties: { title } } }] })
+    });
+    toast(`Created sheet "${title}" in Google Sheet`);
+    await fetchSheetTabs();
+    await saveFullHabitsToGoogleSheet();
+  } catch (e) { alert(e.message); }
 }
 
 async function deleteCurrentSheet() {
+  if (!accessToken) return googleLogin();
   if (availableSheets.length <= 1) return alert("Cannot delete the only sheet.");
-  if (!confirm(`Permanently delete the sheet "${currentSheet}"?`)) return;
+  if (!confirm(`Permanently delete the sheet "${currentSheet}" from Google Sheet?`)) return;
 
   markUserEditing();
   const idx = availableSheets.indexOf(currentSheet);
   if (idx !== -1) availableSheets.splice(idx, 1);
 
-  if (accessToken && sheetMap[currentSheet] !== undefined) {
+  if (sheetMap[currentSheet] !== undefined) {
     try {
       await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ requests: [{ deleteSheet: { sheetId: sheetMap[currentSheet] } }] })
       });
-      toast(`Deleted sheet "${currentSheet}"`);
+      toast(`Deleted sheet "${currentSheet}" from Google Sheet`);
       await fetchSheetTabs();
     } catch (e) { alert(e.message); }
   }
 
   currentSheet = availableSheets[0] || "Habit Tracker";
-  loadLocalState();
   renderTabs();
   render();
 }
 
 /* ================= HABIT MODALS & ACTIONS ================= */
 function openAddHabitModal() {
+  if (!accessToken) return googleLogin();
   markUserEditing();
   editingHabitIndex = null;
   document.getElementById("habitModalTitle").textContent = "＋ Add New Habit";
@@ -2508,6 +2514,7 @@ function openAddHabitModal() {
 }
 
 function openEditHabitModal(hIdx) {
+  if (!accessToken) return googleLogin();
   markUserEditing();
   editingHabitIndex = hIdx;
   const h = habits[hIdx];
@@ -2525,6 +2532,7 @@ function closeHabitModal() {
 }
 
 function saveHabitForm() {
+  if (!accessToken) return googleLogin();
   markUserEditing();
   const title = document.getElementById("hName").value.trim();
   const icon = document.getElementById("hIcon").value;
@@ -2536,15 +2544,14 @@ function saveHabitForm() {
     habits[editingHabitIndex].icon = icon;
     habits[editingHabitIndex].target = target;
     if (data[editingHabitIndex + 1]) data[editingHabitIndex + 1][0] = title;
-    toast("Habit updated");
+    toast("Habit updated in Google Sheet");
   } else {
     habits.push({ id: "h_" + Date.now(), title, icon, target, entries: {} });
     const width = data[0] ? data[0].length : 2;
     data.push([title, ...Array(width - 1).fill("")]);
-    toast("Habit created");
+    toast("Habit created in Google Sheet");
   }
 
-  saveLocalState();
   closeHabitModal();
   render();
 
@@ -2552,49 +2559,48 @@ function saveHabitForm() {
 }
 
 async function deleteCurrentEditingHabit() {
+  if (!accessToken) return googleLogin();
   if (editingHabitIndex === null) return;
   const h = habits[editingHabitIndex];
   if (!h) return;
-  if (!confirm(`Delete habit "${h.title}"?`)) return;
+  if (!confirm(`Delete habit "${h.title}" from Google Sheet?`)) return;
 
   markUserEditing();
   const hIdx = editingHabitIndex;
   habits.splice(hIdx, 1);
   if (data[hIdx + 1]) data.splice(hIdx + 1, 1);
 
-  saveLocalState();
   closeHabitModal();
   render();
 
-  if (accessToken) {
-    const currentSheetId = sheetMap[currentSheet] ?? 0;
-    const row1Based = hIdx + 2;
-    try {
-      await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          requests: [{
-            deleteDimension: {
-              range: {
-                sheetId: currentSheetId,
-                dimension: "ROWS",
-                startIndex: row1Based - 1,
-                endIndex: row1Based
-              }
+  const currentSheetId = sheetMap[currentSheet] ?? 0;
+  const row1Based = hIdx + 2;
+  try {
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requests: [{
+          deleteDimension: {
+            range: {
+              sheetId: currentSheetId,
+              dimension: "ROWS",
+              startIndex: row1Based - 1,
+              endIndex: row1Based
             }
-          }]
-        })
-      });
-    } catch (e) {
-      console.warn("deleteDimension error:", e);
-    }
-    await saveFullHabitsToGoogleSheet();
+          }
+        }]
+      })
+    });
+  } catch (e) {
+    console.warn("deleteDimension error:", e);
   }
-  toast("Habit deleted");
+  await saveFullHabitsToGoogleSheet();
+  toast("Habit deleted from Google Sheet");
 }
 
 function openNoteModalByKey(habitIndex, colKey, colLabel, colIndex) {
+  if (!accessToken) return googleLogin();
   markUserEditing();
   selectedHabitCell = { habitIndex, colKey, colIndex };
   const habit = habits[habitIndex];
@@ -2630,6 +2636,7 @@ function getSelectedNoteStatus() {
 
 async function saveHabitNoteModal() {
   if (!selectedHabitCell) return;
+  if (!accessToken) return googleLogin();
   markUserEditing();
   const { habitIndex, colKey, colIndex } = selectedHabitCell;
   const status = getSelectedNoteStatus();
@@ -2640,10 +2647,9 @@ async function saveHabitNoteModal() {
     data[habitIndex + 1][colIndex] = serializeHabitCell(status, note);
   }
 
-  saveLocalState();
   closeNoteModal();
   render();
-  toast("Saved entry & note");
+  toast("Saved entry & note to Google Sheet");
 
   if (accessToken) {
     await updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, status, note);
@@ -2652,6 +2658,7 @@ async function saveHabitNoteModal() {
 
 async function clearHabitNoteCell() {
   if (!selectedHabitCell) return;
+  if (!accessToken) return googleLogin();
   markUserEditing();
   const { habitIndex, colKey, colIndex } = selectedHabitCell;
   habits[habitIndex].entries[colKey] = { status: "PENDING", note: "" };
@@ -2659,17 +2666,16 @@ async function clearHabitNoteCell() {
     data[habitIndex + 1][colIndex] = "";
   }
 
-  saveLocalState();
   closeNoteModal();
   render();
-  toast("Cell cleared");
+  toast("Cell cleared in Google Sheet");
 
   if (accessToken) {
     await updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, "PENDING", "");
   }
 }
 
-/* Single Cell Sync to Google Sheets with exact column letter ref */
+/* Single Cell Sync to Google Sheets */
 async function updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, status, note) {
   if (!accessToken) return;
   const colLetter = colName(colIndex + 1);
@@ -2696,7 +2702,6 @@ async function updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, status, 
 async function saveFullHabitsToGoogleSheet() {
   if (!accessToken) return;
 
-  // Clear sheet range A1:Z500 first to delete lingering rows/columns permanently
   try {
     const clearRange = `'${currentSheet}'!A1:Z500`;
     await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(clearRange)}:clear`, {
@@ -2771,6 +2776,7 @@ function onMonthChange() {
   currentYear = yr;
   currentMonth = mo;
   render();
+  scrollToActiveDateColumn();
 }
 
 function toggleAnalyticsView() {
