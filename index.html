@@ -1249,7 +1249,7 @@ function detectStartColIndex(headerRow) {
 }
 
 /* Helper to expand Google Sheet grid columns dynamically when column limits are reached */
-async function appendGridColumnsIfNeeded(numColumnsToAdd = 10) {
+async function appendGridColumnsIfNeeded(numColumnsToAdd = 20) {
   if (!accessToken) return;
   const currentSheetId = sheetMap[currentSheet] ?? 0;
   try {
@@ -1922,9 +1922,18 @@ async function autoIncrementNextDate() {
         await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ requests: [{ addSheet: { properties: { title: newMonthTabName } } }] })
+          body: JSON.stringify({
+            requests: [{
+              addSheet: {
+                properties: {
+                  title: newMonthTabName,
+                  gridProperties: { columnCount: 40, rowCount: 100 }
+                }
+              }
+            }]
+          })
         });
-        availableSheets.push(newMonthTabName);
+        await fetchSheetTabs();
         currentSheet = newMonthTabName;
         renderTabs();
         toast(`Created new month sheet tab "${newMonthTabName}"!`);
@@ -1958,7 +1967,7 @@ async function autoIncrementNextDate() {
   } catch (e) {
     // If Grid limit error (400 exceeds grid limits), expand columns via batchUpdate appendDimension then retry
     if (e.message.includes("exceeds grid limits") || e.message.includes("400")) {
-      await appendGridColumnsIfNeeded(10);
+      await appendGridColumnsIfNeeded(20);
       try {
         await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
           method: "PUT",
@@ -1977,23 +1986,23 @@ async function autoIncrementNextDate() {
   }
 }
 
-/* Auto-Populate Full Month Dates (1 to 31) */
+/* Auto-Populate Full Month Dates (1 to 31) while PRESERVING existing entries & notes */
 async function populateFullMonthDates() {
   if (!accessToken) return googleLogin();
   markUserEditing();
   const daysInMonth = getDaysInCurrentMonth();
   const monthShort = MONTH_SHORT[currentMonth].toUpperCase();
 
-  data[0] = ["HABIT"];
+  data[0] = (startColIndex === 2) ? ["HABIT", "TARGET"] : ["HABIT"];
   for (let d = 1; d <= daysInMonth; d++) {
     const label = d < 10 ? `0${d}-${monthShort}` : `${d}-${monthShort}`;
     data[0].push(label);
   }
 
   habits.forEach((h, idx) => {
-    const row = [h.title];
+    const row = (startColIndex === 2) ? [h.title, h.target || "Daily"] : [h.title];
     for (let d = 1; d <= daysInMonth; d++) {
-      const label = data[0][d];
+      const label = d < 10 ? `0${d}-${monthShort}` : `${d}-${monthShort}`;
       const entry = h.entries[label];
       row.push(entry ? serializeHabitCell(entry.status, entry.note) : "");
     }
@@ -2028,7 +2037,7 @@ async function toggleHabitCellStatusByKey(habitIndex, colKey, colIndex) {
   }
 
   render();
-  await updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, nextStatus, current.note);
+  await updateSingleHabitCellInGoogleSheet(habitIndex, colKey, colIndex, nextStatus, current.note);
 }
 
 /* Calculate Habit Streaks & Stats based on Active Month */
@@ -2426,7 +2435,7 @@ async function addDate() {
     toast(`Added column "${date}" to Google Sheet`);
   } catch (e) {
     if (e.message.includes("exceeds grid limits") || e.message.includes("400")) {
-      await appendGridColumnsIfNeeded(10);
+      await appendGridColumnsIfNeeded(20);
       try {
         await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
           method: "PUT",
@@ -2565,7 +2574,16 @@ async function addNewSheet() {
     await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}:batchUpdate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ requests: [{ addSheet: { properties: { title } } }] })
+      body: JSON.stringify({
+        requests: [{
+          addSheet: {
+            properties: {
+              title,
+              gridProperties: { columnCount: 40, rowCount: 100 }
+            }
+          }
+        }]
+      })
     });
     toast(`Created sheet "${title}" in Google Sheet`);
     await fetchSheetTabs();
@@ -2752,7 +2770,7 @@ async function saveHabitNoteModal() {
   toast("Saved entry & note to Google Sheet");
 
   if (accessToken) {
-    await updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, status, note);
+    await updateSingleHabitCellInGoogleSheet(habitIndex, colKey, colIndex, status, note);
   }
 }
 
@@ -2771,12 +2789,12 @@ async function clearHabitNoteCell() {
   toast("Cell cleared in Google Sheet");
 
   if (accessToken) {
-    await updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, "PENDING", "");
+    await updateSingleHabitCellInGoogleSheet(habitIndex, colKey, colIndex, "PENDING", "");
   }
 }
 
 /* Single Cell Sync to Google Sheets */
-async function updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, status, note) {
+async function updateSingleHabitCellInGoogleSheet(habitIndex, colKey, colIndex, status, note) {
   if (!accessToken) return;
   const colLetter = colName(colIndex + 1);
   const rowNumber = habitIndex + 2;
@@ -2794,7 +2812,7 @@ async function updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, status, 
     document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
   } catch (e) {
     if (e.message.includes("exceeds grid limits") || e.message.includes("400")) {
-      await appendGridColumnsIfNeeded(10);
+      await appendGridColumnsIfNeeded(20);
       try {
         await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
           method: "PUT",
@@ -2817,15 +2835,6 @@ async function updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, status, 
 async function saveFullHabitsToGoogleSheet() {
   if (!accessToken) return;
 
-  try {
-    const clearRange = `'${currentSheet}'!A1:Z500`;
-    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(clearRange)}:clear`, {
-      method: "POST"
-    });
-  } catch (e) {
-    console.warn("Clear sheet range error:", e);
-  }
-
   const headers = (startColIndex === 2) ? ["HABIT", "TARGET"] : ["HABIT"];
   customDateCols.forEach(colInfo => headers.push(colInfo.label));
 
@@ -2839,6 +2848,20 @@ async function saveFullHabitsToGoogleSheet() {
     rows.push(row);
   });
 
+  // Expand sheet columns if writing past default 26 columns
+  if (headers.length > 25) {
+    await appendGridColumnsIfNeeded(20);
+  }
+
+  try {
+    const clearRange = `'${currentSheet}'!1:1000`;
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(clearRange)}:clear`, {
+      method: "POST"
+    });
+  } catch (e) {
+    console.warn("Clear sheet range error:", e);
+  }
+
   try {
     const range = `'${currentSheet}'!A1`;
     await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
@@ -2850,7 +2873,7 @@ async function saveFullHabitsToGoogleSheet() {
     document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
   } catch (e) {
     if (e.message.includes("exceeds grid limits") || e.message.includes("400")) {
-      await appendGridColumnsIfNeeded(10);
+      await appendGridColumnsIfNeeded(20);
       try {
         const range = `'${currentSheet}'!A1`;
         await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
