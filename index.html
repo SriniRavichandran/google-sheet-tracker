@@ -131,7 +131,7 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
   background: transparent;
   color: var(--muted);
   padding: 7px 14px;
-  border-radius: 99px;
+  border-radius: 9px;
   font-weight: 800;
   font-size: 12px;
   cursor: pointer;
@@ -1035,8 +1035,8 @@ tr.drag-over {
     <div class="field"><label>ACTIVITY</label><textarea id="mValue" class="input" placeholder="Enter activity details..."></textarea></div>
     <div class="modal-actions">
       <div class="modal-btn-group">
-        <button class="btn danger" onclick="modalClearCell()">🧹 Clear Cell</button>
-        <button class="btn danger" onclick="modalDeleteRow()">🗑️ Delete Row</button>
+        <button class="btn danger" id="mClearCellBtn" onclick="modalClearCell()">🧹 Clear Cell</button>
+        <button class="btn danger" id="mDeleteRowBtn" onclick="modalDeleteRow()">🗑️ Delete Row</button>
       </div>
       <div class="modal-btn-group">
         <button class="btn" onclick="closeModal()">Cancel</button>
@@ -1115,7 +1115,7 @@ tr.drag-over {
       <textarea id="nNoteText" class="input" placeholder="Add custom notes or reflections for this date..."></textarea>
     </div>
     <div class="modal-actions">
-      <button class="btn danger" onclick="clearHabitNoteCell()">Clear Cell</button>
+      <button class="btn danger" id="nClearCellBtn" onclick="clearHabitNoteCell()">Clear Cell</button>
       <div style="display:flex;gap:10px;margin-left:auto;">
         <button class="btn" onclick="closeNoteModal()">Cancel</button>
         <button class="btn primary" onclick="saveHabitNoteModal()">Save Entry</button>
@@ -1591,20 +1591,22 @@ function renderHabitToolbar() {
     { text: "＋ Add Habit", class: "success", click: openAddHabitModal },
     { text: "⏩ Auto Next Date", class: "primary", click: autoIncrementNextDate },
     { text: "📅 Populate Month (1-31)", class: "", click: populateFullMonthDates },
-    { text: deleteMode ? "🗑️ Delete Mode: ON" : "🔒 Delete Mode: OFF", class: deleteMode ? "danger" : "", click: toggleDeleteMode }
+    { text: deleteMode ? "🗑️ Delete Mode: ON" : "🔒 Delete Mode: OFF", class: deleteMode ? "danger" : "", click: toggleDeleteMode },
+    { text: "🧹 Clear Cell", class: "danger", click: clearSelected, isDeleteBtn: true },
+    { text: "🗑️ Delete Row", class: "danger", click: deleteRowPrompt, isDeleteBtn: true },
+    { text: "🗑️ Delete Column", class: "danger", click: deleteColumnPrompt, isDeleteBtn: true },
+    { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet, isDeleteBtn: true },
+    { text: "↻ Refresh & Sync", class: "primary", click: refreshAll }
   ];
-
-  if (deleteMode) {
-    btns.push({ text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet });
-  }
-
-  btns.push({ text: "↻ Refresh & Sync", class: "primary", click: refreshAll });
 
   btns.forEach(b => {
     const btn = document.createElement("button");
     btn.className = `btn ${b.class}`;
     btn.textContent = b.text;
     btn.onclick = b.click;
+    if (b.isDeleteBtn) {
+      btn.style.display = deleteMode ? "inline-flex" : "none";
+    }
     container.appendChild(btn);
   });
 }
@@ -1614,7 +1616,7 @@ function renderHabitGrid() {
   table.innerHTML = "";
   document.getElementById("panelHeadTitle").textContent = `${currentSheet} (${MONTH_NAMES[currentMonth]} ${currentYear})`;
   document.getElementById("panelHeadHint").textContent = deleteMode
-    ? "⚠️ DELETE MODE ACTIVE: Click 🗑️ button on any row to permanently delete it."
+    ? "⚠️ DELETE MODE ACTIVE: Click 🗑️ / ✕ on any row, column, or toolbar button to permanently delete."
     : "Drag handle (≡) to reorder • Click cell to tick: 🟢 Done (✓) ➜ 🔴 Missed (✕) ➜ ⏸️ Skipped ➜ ⚪ Blank";
 
   const q = document.getElementById("search").value.toLowerCase();
@@ -1633,9 +1635,11 @@ function renderHabitGrid() {
     th.title = `Google Sheet Column ${colInfo.colLetter} - Double-click to rename`;
     th.ondblclick = () => renameDate(colInfo.colIndex + 1);
 
+    const delColBtnHtml = deleteMode ? `<button class="del-mini-btn" onclick="event.stopPropagation(); deleteColumn(${colInfo.colIndex + 1}, '${escapeHtml(colInfo.label)}')" title="Delete column">✕</button>` : '';
+
     th.innerHTML = `
       <div class="th-date-wrap">
-        <div class="th-col-ref">COL ${colInfo.colLetter}</div>
+        <div class="th-col-ref">COL ${colInfo.colLetter} ${delColBtnHtml}</div>
         <div class="th-date-num">${escapeHtml(colInfo.label)}</div>
         <div class="th-date-day">${colInfo.dayName || ''}</div>
       </div>
@@ -2224,23 +2228,22 @@ function renderActivityToolbar() {
   const btns = [
     { text: "＋ Add Column", class: "", click: addDate },
     { text: "＋ Add Row", class: "", click: addTime },
-    { text: deleteMode ? "🗑️ Delete Mode: ON" : "🔒 Delete Mode: OFF", class: deleteMode ? "danger" : "", click: toggleDeleteMode }
+    { text: deleteMode ? "🗑️ Delete Mode: ON" : "🔒 Delete Mode: OFF", class: deleteMode ? "danger" : "", click: toggleDeleteMode },
+    { text: "🧹 Clear Cell", class: "danger", click: clearSelected, isDeleteBtn: true },
+    { text: "🗑️ Delete Column", class: "danger", click: deleteColumnPrompt, isDeleteBtn: true },
+    { text: "🗑️ Delete Row", class: "danger", click: deleteRowPrompt, isDeleteBtn: true },
+    { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet, isDeleteBtn: true },
+    { text: "↻ Refresh & Sync", class: "primary", click: refreshAll }
   ];
-
-  if (deleteMode) {
-    btns.push({ text: "🧹 Clear Cell", class: "danger", click: clearSelected });
-    btns.push({ text: "🗑️ Delete Column", class: "danger", click: deleteColumnPrompt });
-    btns.push({ text: "🗑️ Delete Row", class: "danger", click: deleteRowPrompt });
-    btns.push({ text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet });
-  }
-
-  btns.push({ text: "↻ Refresh & Sync", class: "primary", click: refreshAll });
 
   btns.forEach(b => {
     const btn = document.createElement("button");
     btn.className = `btn ${b.class}`;
     btn.textContent = b.text;
     btn.onclick = b.click;
+    if (b.isDeleteBtn) {
+      btn.style.display = deleteMode ? "inline-flex" : "none";
+    }
     container.appendChild(btn);
   });
 }
@@ -2251,6 +2254,13 @@ function openEditor(row, col, time, date, value) {
   document.getElementById("mTime").value = time;
   document.getElementById("mDate").value = date;
   document.getElementById("mValue").value = value;
+
+  // Toggle modal delete/clear buttons visibility based on deleteMode
+  const mClearBtn = document.getElementById("mClearCellBtn");
+  const mDelRowBtn = document.getElementById("mDeleteRowBtn");
+  if (mClearBtn) mClearBtn.style.display = deleteMode ? "inline-flex" : "none";
+  if (mDelRowBtn) mDelRowBtn.style.display = deleteMode ? "inline-flex" : "none";
+
   document.getElementById("modalBg").style.display = "flex";
   document.getElementById("mValue").focus();
 }
@@ -2283,6 +2293,10 @@ async function saveCell() {
 }
 
 async function clearCellDirect(row, col) {
+  if (!deleteMode) {
+    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to clear cells.");
+    return;
+  }
   if (!accessToken) return googleLogin();
   markUserEditing();
   data[row - 1][col - 1] = "";
@@ -2320,6 +2334,10 @@ async function clearSelected() {
 }
 
 async function modalClearCell() {
+  if (!deleteMode) {
+    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to clear cells.");
+    return;
+  }
   if (!selected) return;
   document.getElementById("mValue").value = "";
   await saveCell();
@@ -2654,6 +2672,9 @@ function openNoteModalByKey(habitIndex, colKey, colLabel, colIndex) {
   document.getElementById("nDateText").value = `Column ${colName(colIndex + 1)} (${colLabel})`;
   document.getElementById("nNoteText").value = entry.note || "";
 
+  const nClearBtn = document.getElementById("nClearCellBtn");
+  if (nClearBtn) nClearBtn.style.display = deleteMode ? "inline-flex" : "none";
+
   setNoteStatusUI(entry.status);
   document.getElementById("noteModalBg").style.display = "flex";
   document.getElementById("nNoteText").focus();
@@ -2701,6 +2722,10 @@ async function saveHabitNoteModal() {
 }
 
 async function clearHabitNoteCell() {
+  if (!deleteMode) {
+    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to clear cells.");
+    return;
+  }
   if (!selectedHabitCell) return;
   if (!accessToken) return googleLogin();
   markUserEditing();
@@ -2748,7 +2773,7 @@ async function saveFullHabitsToGoogleSheet() {
 
   try {
     const clearRange = `'${currentSheet}'!A1:Z500`;
-    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(clearRange)}:clear`, {
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}:clear`, {
       method: "POST"
     });
   } catch (e) {
