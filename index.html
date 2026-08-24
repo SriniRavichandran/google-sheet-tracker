@@ -497,8 +497,8 @@ th:first-child, td:first-child {
   position: sticky;
   left: 0;
   z-index: 16;
-  min-width: 250px;
-  max-width: 320px;
+  min-width: 280px;
+  max-width: 360px;
   background: #0d1e33;
   text-align: left;
   padding: 12px 16px;
@@ -529,6 +529,26 @@ th.th-date.today {
   box-shadow: inset 0 0 0 1px var(--today-border);
 }
 th.th-date.today .th-date-num { color: var(--cyan); text-shadow: 0 0 10px rgba(54, 224, 255, 0.5); }
+
+/* Drag and Drop Row Styling */
+tr.draggable-row {
+  cursor: grab;
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+tr.draggable-row:active { cursor: grabbing; }
+tr.drag-over {
+  background: rgba(54, 224, 255, 0.15) !important;
+  border-top: 2px dashed var(--cyan) !important;
+}
+.drag-handle {
+  cursor: grab;
+  color: var(--muted);
+  font-size: 16px;
+  padding: 0 6px;
+  user-select: none;
+  transition: 0.2s;
+}
+.drag-handle:hover { color: var(--cyan); transform: scale(1.2); }
 
 /* Activity Cell */
 .cell {
@@ -567,11 +587,11 @@ th.th-date.today .th-date-num { color: var(--cyan); text-shadow: 0 0 10px rgba(5
 .empty { color: #5a718c; font-style: italic; }
 
 /* Interactive Habit Cell with Ticks */
-.habit-col-cell { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.habit-col-main { display: flex; align-items: center; gap: 10px; overflow: hidden; }
+.habit-col-cell { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.habit-col-main { display: flex; align-items: center; gap: 8px; overflow: hidden; flex: 1; }
 .habit-icon {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 10px;
   display: grid;
   place-items: center;
@@ -579,9 +599,18 @@ th.th-date.today .th-date-num { color: var(--cyan); text-shadow: 0 0 10px rgba(5
   background: rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
 }
-.habit-title-wrap { overflow: hidden; }
-.habit-name { font-size: 13px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.habit-title-wrap { overflow: hidden; flex: 1; }
+.habit-name { font-size: 13px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
 .habit-meta { display: flex; gap: 8px; align-items: center; margin-top: 3px; font-size: 11px; color: var(--muted); }
+.target-chip {
+  background: rgba(54, 224, 255, 0.12);
+  color: var(--cyan);
+  border: 1px solid rgba(54, 224, 255, 0.3);
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+}
 .streak-chip { color: #ff9d00; font-weight: 800; display: inline-flex; align-items: center; gap: 2px; }
 
 .cell-habit {
@@ -671,13 +700,15 @@ th.th-date.today .th-date-num { color: var(--cyan); text-shadow: 0 0 10px rgba(5
   border: 1px solid rgba(255,107,122,.25);
   color: #ff9fa8;
   border-radius: 6px;
-  padding: 2px 6px;
-  font-size: 10px;
+  padding: 3px 6px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
-  margin-left: 6px;
+  margin-left: 2px;
   transition: .2s;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
 }
 .del-mini-btn:hover { background: #ff4d61; color: #fff; border-color: #ff4d61; transform: scale(1.08); }
 
@@ -814,7 +845,7 @@ th.th-date.today .th-date-num { color: var(--cyan); text-shadow: 0 0 10px rgba(5
           <span style="background:rgba(53,211,153,0.18);color:var(--green);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:800;" id="heroTabType">🔥 Habit Checkmark Mode</span>
         </div>
         <p class="hero-subtitle" id="heroDesc">
-          Track daily checkmarks, build consistency streaks, analyze weekly & monthly progress, auto-increment dates, and add date notes. Synchronized in real-time with Google Sheets.
+          Track daily checkmarks, drag & drop to reorder habits, configure targets (Daily, 1x/Week, 1x/Month, 4x/Year), and analyze weekly progress. Real-time synced with Google Sheets.
         </p>
       </div>
       <div style="display:flex;gap:12px;margin-top:16px;" id="heroActionBtns">
@@ -897,7 +928,7 @@ th.th-date.today .th-date-num { color: var(--cyan); text-shadow: 0 0 10px rgba(5
   <section class="panel">
     <div class="panel-head">
       <h3 id="panelHeadTitle">Daily Habit Tracker</h3>
-      <span id="panelHeadHint">Click cell to tick: 🟢 Done (✓) ➜ 🔴 Missed (✕) ➜ ⏸️ Skipped ➜ ⚪ Blank | Right-click for Note</span>
+      <span id="panelHeadHint">Drag handle (≡) to reorder • Click cell to tick: 🟢 Done (✓) ➜ 🔴 Missed (✕) ➜ ⏸️ Skipped ➜ ⚪ Blank</span>
     </div>
     <div class="table-wrap">
       <table id="grid"></table>
@@ -947,8 +978,16 @@ th.th-date.today .th-date-num { color: var(--cyan); text-shadow: 0 0 10px rgba(5
       </select>
     </div>
     <div class="field">
-      <label>Target Frequency</label>
-      <input id="hTarget" class="input" placeholder="e.g. Daily or 6x/week">
+      <label>Target Frequency Option</label>
+      <select id="hTarget" class="input">
+        <option value="Daily">Daily</option>
+        <option value="1x/Week">1x/Week (Week 1)</option>
+        <option value="2x/Week">2x/Week</option>
+        <option value="3x/Week">3x/Week</option>
+        <option value="6x/Week">6x/Week</option>
+        <option value="1x/Month">1x/Month (Month 1)</option>
+        <option value="4x/Year">4x/Year (Year 4)</option>
+      </select>
     </div>
     <div class="modal-actions">
       <button class="btn danger" id="hDeleteBtn" style="display:none" onclick="deleteCurrentEditingHabit()">Delete Habit</button>
@@ -1022,6 +1061,7 @@ let startColIndex = 1; // 1 = Col B (if no Target col), 2 = Col C (if Target col
 let selected = null;
 let selectedHabitCell = null;
 let editingHabitIndex = null;
+let draggedHabitIdx = null;
 
 let currentYear = 2026;
 let currentMonth = 7; // 0-indexed: 7 = August
@@ -1033,7 +1073,7 @@ const MONTH_NAMES = [
 
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-/* Default Demo Habits */
+/* Demo Habits with Target Options (Daily, 1x/Week, 1x/Month, 4x/Year) */
 const DEFAULT_HABITS = [
   { id: "h1", title: "🏋️ Morning Workout", icon: "🏋️", target: "Daily", entries: {
     "10-Aug": {status: "DONE", note: "Upper body session"},
@@ -1059,7 +1099,7 @@ const DEFAULT_HABITS = [
     "Aug 14": {status: "DONE", note: "10 mins"},
     "Aug 15": {status: "MISSED", note: "Skipped morning"}
   }},
-  { id: "h4", title: "💻 Code & Build Projects", icon: "💻", target: "6x/week", entries: {
+  { id: "h4", title: "💻 Code & Build Projects", icon: "💻", target: "1x/Week", entries: {
     "10-Aug": {status: "DONE", note: "Built Habit Features"},
     "11-Aug": {status: "DONE", note: "Added Streaks logic"},
     "Aug 12": {status: "DONE", note: "Google API sync"},
@@ -1075,7 +1115,7 @@ const DEFAULT_HABITS = [
     "Aug 14": {status: "DONE", note: "3L reached"},
     "Aug 15": {status: "DONE", note: "3.2L"}
   }},
-  { id: "h6", title: "🍎 Healthy Meals / No Sugar", icon: "🍎", target: "Daily", entries: {
+  { id: "h6", title: "🍎 Healthy Meals / No Sugar", icon: "🍎", target: "1x/Month", entries: {
     "10-Aug": {status: "DONE", note: "Clean diet"},
     "11-Aug": {status: "MISSED", note: "Sugar cheat"},
     "Aug 12": {status: "DONE", note: "Clean diet"},
@@ -1083,7 +1123,7 @@ const DEFAULT_HABITS = [
     "Aug 14": {status: "DONE", note: "Clean diet"},
     "Aug 15": {status: "DONE", note: "Clean diet"}
   }},
-  { id: "h7", title: "😴 8 Hours Sleep", icon: "😴", target: "Daily", entries: {
+  { id: "h7", title: "😴 8 Hours Sleep", icon: "😴", target: "4x/Year", entries: {
     "10-Aug": {status: "DONE", note: "8h 15m"},
     "11-Aug": {status: "DONE", note: "8h"},
     "Aug 12": {status: "DONE", note: "8h 30m"},
@@ -1414,8 +1454,8 @@ function render() {
 function renderHabitWorkspace() {
   const monthTitle = `${MONTH_NAMES[currentMonth]} ${currentYear}`;
   document.getElementById("heroTitle").textContent = `${currentSheet} - Habit Tracker`;
-  document.getElementById("heroTabType").textContent = "🔥 Habit Checkmark & Auto-Date Mode";
-  document.getElementById("heroDesc").textContent = "Track daily checkmarks, build consistency streaks, analyze weekly & monthly progress, auto-increment dates, and add date notes. Synchronized in real-time with Google Sheets.";
+  document.getElementById("heroTabType").textContent = "🔥 Habit Checkmark & Drag-Drop Mode";
+  document.getElementById("heroDesc").textContent = "Track daily checkmarks, drag & drop to reorder habits, configure target frequencies (Daily, 1x/Week, 1x/Month, 4x/Year), and sync real-time with Google Sheets.";
 
   const heroBtns = document.getElementById("heroActionBtns");
   heroBtns.innerHTML = `
@@ -1503,7 +1543,7 @@ function renderHabitGrid() {
   const table = document.getElementById("grid");
   table.innerHTML = "";
   document.getElementById("panelHeadTitle").textContent = `${currentSheet} (${MONTH_NAMES[currentMonth]} ${currentYear})`;
-  document.getElementById("panelHeadHint").textContent = "Click cell to tick: 🟢 Done (✓) ➜ 🔴 Missed (✕) ➜ ⏸️ Skipped ➜ ⚪ Blank | Right-click for Note";
+  document.getElementById("panelHeadHint").textContent = "Drag handle (≡) to reorder • Click cell to tick: 🟢 Done (✓) ➜ 🔴 Missed (✕) ➜ ⏸️ Skipped ➜ ⚪ Blank";
 
   const q = document.getElementById("search").value.toLowerCase();
 
@@ -1511,12 +1551,7 @@ function renderHabitGrid() {
   const trHead = document.createElement("tr");
 
   const thHabit = document.createElement("th");
-  thHabit.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <span>HABIT (COL A)</span>
-      <span style="color:var(--muted);font-size:10px;">${habits.length} HABITS</span>
-    </div>
-  `;
+  thHabit.innerHTML = `<span>HABIT (COL A)</span>`;
   trHead.appendChild(thHabit);
 
   // Dynamic Date Column Headers aligned with exact Google Sheets column letters
@@ -1545,14 +1580,26 @@ function renderHabitGrid() {
 
     const stats = calcHabitStats(habit);
     const tr = document.createElement("tr");
+    tr.className = "draggable-row";
+    tr.draggable = true;
+
+    // Drag and Drop Events
+    tr.ondragstart = (e) => handleDragStart(e, hIdx);
+    tr.ondragover = (e) => handleDragOver(e, tr);
+    tr.ondragleave = (e) => tr.classList.remove("drag-over");
+    tr.ondrop = (e) => handleDrop(e, hIdx, tr);
 
     const tdHabit = document.createElement("td");
     tdHabit.className = "habit-col-cell";
     tdHabit.innerHTML = `
+      <div class="drag-handle" title="Drag row to reorder">≡</div>
       <div class="habit-col-main">
         <div class="habit-icon">${habit.icon || '🎯'}</div>
         <div class="habit-title-wrap">
-          <div class="habit-name" title="${escapeHtml(habit.title)}">${escapeHtml(habit.title)}</div>
+          <div class="habit-name" title="${escapeHtml(habit.title)}">
+            ${escapeHtml(habit.title)}
+            <span class="target-chip">${escapeHtml(habit.target || 'Daily')}</span>
+          </div>
           <div class="habit-meta">
             <span class="streak-chip">🔥 ${stats.currentStreak}d</span>
             <span>🏆 ${stats.bestStreak}d</span>
@@ -1560,7 +1607,10 @@ function renderHabitGrid() {
           </div>
         </div>
       </div>
-      <button class="btn" style="padding:4px 7px;font-size:11px;" onclick="openEditHabitModal(${hIdx})" title="Edit Habit">✏️</button>
+      <div style="display:flex;gap:4px;margin-left:auto;">
+        <button class="btn" style="padding:4px 7px;font-size:11px;" onclick="openEditHabitModal(${hIdx})" title="Edit Habit">✏️</button>
+        <button class="btn danger" style="padding:4px 7px;font-size:11px;" onclick="deleteHabitRowDirect(${hIdx})" title="Remove Row">🗑️</button>
+      </div>
     `;
     tr.appendChild(tdHabit);
 
@@ -1624,11 +1674,62 @@ function renderHabitGrid() {
   table.appendChild(tbody);
 }
 
+/* Drag and Drop Handlers for Reordering Habit Rows */
+function handleDragStart(e, idx) {
+  draggedHabitIdx = idx;
+  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/plain", idx);
+  e.currentTarget.style.opacity = "0.5";
+}
+
+function handleDragOver(e, tr) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  tr.classList.add("drag-over");
+}
+
+function handleDrop(e, targetIdx, tr) {
+  e.preventDefault();
+  tr.classList.remove("drag-over");
+  if (draggedHabitIdx === null || draggedHabitIdx === targetIdx) return;
+
+  const movedHabit = habits.splice(draggedHabitIdx, 1)[0];
+  habits.splice(targetIdx, 0, movedHabit);
+
+  if (data[draggedHabitIdx + 1]) {
+    const movedRow = data.splice(draggedHabitIdx + 1, 1)[0];
+    data.splice(targetIdx + 1, 0, movedRow);
+  }
+
+  draggedHabitIdx = null;
+  saveLocalState();
+  render();
+
+  if (accessToken) saveFullHabitsToGoogleSheet();
+  toast("Reordered habit row");
+}
+
+/* Remove Row Direct Action */
+function deleteHabitRowDirect(hIdx) {
+  const h = habits[hIdx];
+  if (!h) return;
+  if (!confirm(`Are you sure you want to remove row "${h.title}"?`)) return;
+
+  habits.splice(hIdx, 1);
+  if (data[hIdx + 1]) data.splice(hIdx + 1, 1);
+
+  saveLocalState();
+  render();
+
+  if (accessToken) saveFullHabitsToGoogleSheet();
+  toast(`Removed habit "${h.title}"`);
+}
+
 /* Auto Next Date Feature: Auto-increment date header */
 async function autoIncrementNextDate() {
   let nextDayNum = 1;
   let monthShort = MONTH_SHORT[currentMonth];
-  let formatPattern = "DD-MMM"; // e.g. "16-Aug" or "Aug 16"
+  let formatPattern = "DD-MMM";
 
   if (customDateCols.length > 0) {
     const lastCol = customDateCols[customDateCols.length - 1];
@@ -1675,7 +1776,6 @@ async function populateFullMonthDates() {
     data[0].push(label);
   }
 
-  // Preserve rows
   habits.forEach((h, idx) => {
     const row = [h.title];
     for (let d = 1; d <= daysInMonth; d++) {
@@ -1708,7 +1808,6 @@ async function toggleHabitCellStatusByKey(habitIndex, colKey, colIndex) {
 
   habit.entries[colKey] = { status: nextStatus, note: current.note };
 
-  // Sync to data matrix
   if (data[habitIndex + 1]) {
     data[habitIndex + 1][colIndex] = serializeHabitCell(nextStatus, current.note);
   }
@@ -2290,7 +2389,7 @@ function closeHabitModal() {
 function saveHabitForm() {
   const title = document.getElementById("hName").value.trim();
   const icon = document.getElementById("hIcon").value;
-  const target = document.getElementById("hTarget").value.trim() || "Daily";
+  const target = document.getElementById("hTarget").value || "Daily";
   if (!title) return alert("Please enter a habit title.");
 
   if (editingHabitIndex !== null) {
