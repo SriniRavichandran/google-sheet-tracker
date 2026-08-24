@@ -131,7 +131,7 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
   background: transparent;
   color: var(--muted);
   padding: 7px 14px;
-  border-radius: 9px;
+  border-radius: 99px;
   font-weight: 800;
   font-size: 12px;
   cursor: pointer;
@@ -1591,10 +1591,14 @@ function renderHabitToolbar() {
     { text: "＋ Add Habit", class: "success", click: openAddHabitModal },
     { text: "⏩ Auto Next Date", class: "primary", click: autoIncrementNextDate },
     { text: "📅 Populate Month (1-31)", class: "", click: populateFullMonthDates },
-    { text: deleteMode ? "🗑️ Delete Mode: ON" : "🔒 Delete Mode: OFF", class: deleteMode ? "danger" : "", click: toggleDeleteMode },
-    { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet },
-    { text: "↻ Refresh & Sync", class: "primary", click: refreshAll }
+    { text: deleteMode ? "🗑️ Delete Mode: ON" : "🔒 Delete Mode: OFF", class: deleteMode ? "danger" : "", click: toggleDeleteMode }
   ];
+
+  if (deleteMode) {
+    btns.push({ text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet });
+  }
+
+  btns.push({ text: "↻ Refresh & Sync", class: "primary", click: refreshAll });
 
   btns.forEach(b => {
     const btn = document.createElement("button");
@@ -1818,6 +1822,10 @@ function handleDrop(e, targetIdx, tr) {
 
 /* Remove Row Direct Action - Deletes physically from Google Sheets */
 async function deleteHabitRowDirect(hIdx) {
+  if (!deleteMode) {
+    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to delete.");
+    return;
+  }
   if (!accessToken) return googleLogin();
   const h = habits[hIdx];
   if (!h) return;
@@ -2216,13 +2224,17 @@ function renderActivityToolbar() {
   const btns = [
     { text: "＋ Add Column", class: "", click: addDate },
     { text: "＋ Add Row", class: "", click: addTime },
-    { text: "🧹 Clear Cell", class: "danger", click: clearSelected },
-    { text: deleteMode ? "🗑️ Delete Mode: ON" : "🔒 Delete Mode: OFF", class: deleteMode ? "danger" : "", click: toggleDeleteMode },
-    { text: "🗑️ Delete Column", class: "danger", click: deleteColumnPrompt },
-    { text: "🗑️ Delete Row", class: "danger", click: deleteRowPrompt },
-    { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet },
-    { text: "↻ Refresh & Sync", class: "primary", click: refreshAll }
+    { text: deleteMode ? "🗑️ Delete Mode: ON" : "🔒 Delete Mode: OFF", class: deleteMode ? "danger" : "", click: toggleDeleteMode }
   ];
+
+  if (deleteMode) {
+    btns.push({ text: "🧹 Clear Cell", class: "danger", click: clearSelected });
+    btns.push({ text: "🗑️ Delete Column", class: "danger", click: deleteColumnPrompt });
+    btns.push({ text: "🗑️ Delete Row", class: "danger", click: deleteRowPrompt });
+    btns.push({ text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet });
+  }
+
+  btns.push({ text: "↻ Refresh & Sync", class: "primary", click: refreshAll });
 
   btns.forEach(b => {
     const btn = document.createElement("button");
@@ -2286,6 +2298,10 @@ async function clearCellDirect(row, col) {
 }
 
 async function clearSelected() {
+  if (!deleteMode) {
+    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to clear cells.");
+    return;
+  }
   if (selected) {
     await clearCellDirect(selected.row, selected.col);
     closeModal();
@@ -2310,6 +2326,10 @@ async function modalClearCell() {
 }
 
 async function modalDeleteRow() {
+  if (!deleteMode) {
+    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to delete rows.");
+    return;
+  }
   if (!selected) return;
   const rowToDelete = selected.row;
   const timeName = document.getElementById("mTime").value || `Row ${rowToDelete}`;
@@ -2365,6 +2385,10 @@ async function addTime() {
 }
 
 async function deleteColumn(col1Based, colNameText = "") {
+  if (!deleteMode) {
+    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to delete columns.");
+    return;
+  }
   if (!accessToken) return googleLogin();
   if (!confirm(`Are you sure you want to delete column "${colNameText || col1Based}" from Google Sheet?`)) return;
   markUserEditing();
@@ -2387,6 +2411,10 @@ async function deleteColumn(col1Based, colNameText = "") {
 }
 
 async function deleteColumnPrompt() {
+  if (!deleteMode) {
+    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to delete columns.");
+    return;
+  }
   if (!data.length || data[0].length <= 1) return alert("No columns to delete.");
   const colList = data[0].slice(1).map((v, i) => `${i + 2}: ${v || ('Column ' + (i + 2))}`).join("\n");
   const choice = prompt("Enter column number to delete:\n\n" + colList);
@@ -2397,6 +2425,10 @@ async function deleteColumnPrompt() {
 }
 
 async function deleteRow(row1Based, rowNameText = "") {
+  if (!deleteMode) {
+    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to delete rows.");
+    return;
+  }
   if (!accessToken) return googleLogin();
   if (!confirm(`Are you sure you want to delete row "${rowNameText || row1Based}" from Google Sheet?`)) return;
   markUserEditing();
@@ -2420,6 +2452,10 @@ async function deleteRow(row1Based, rowNameText = "") {
 }
 
 async function deleteRowPrompt() {
+  if (!deleteMode) {
+    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to delete rows.");
+    return;
+  }
   if (data.length <= 1) return alert("No rows to delete.");
   const rowList = data.slice(1).map((r, i) => `${i + 2}: ${r[0] || ('Row ' + (i + 2))}`).join("\n");
   const choice = prompt("Enter row number to delete:\n\n" + rowList);
@@ -2474,6 +2510,10 @@ async function addNewSheet() {
 }
 
 async function deleteCurrentSheet() {
+  if (!deleteMode) {
+    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to delete sheet tabs.");
+    return;
+  }
   if (!accessToken) return googleLogin();
   if (availableSheets.length <= 1) return alert("Cannot delete the only sheet.");
   if (!confirm(`Permanently delete the sheet "${currentSheet}" from Google Sheet?`)) return;
@@ -2522,7 +2562,7 @@ function openEditHabitModal(hIdx) {
   document.getElementById("hName").value = h.title;
   document.getElementById("hIcon").value = h.icon || "🏋️";
   document.getElementById("hTarget").value = h.target || "Daily";
-  document.getElementById("hDeleteBtn").style.display = "inline-flex";
+  document.getElementById("hDeleteBtn").style.display = deleteMode ? "inline-flex" : "none";
   document.getElementById("habitModalBg").style.display = "flex";
 }
 
@@ -2559,6 +2599,10 @@ function saveHabitForm() {
 }
 
 async function deleteCurrentEditingHabit() {
+  if (!deleteMode) {
+    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to delete habits.");
+    return;
+  }
   if (!accessToken) return googleLogin();
   if (editingHabitIndex === null) return;
   const h = habits[editingHabitIndex];
