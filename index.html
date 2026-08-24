@@ -910,8 +910,14 @@ tr.drag-over {
       <button id="btnViewActivity" class="mode-btn" onclick="setViewMode('activity')">📋 Schedule / Activity</button>
     </div>
 
-    <!-- Separate Month and Year Dropdowns -->
+    <!-- Frequency View Mode, Month and Year Dropdowns -->
     <div style="display:inline-flex;gap:6px;align-items:center;">
+      <select id="freqSelect" class="month-picker" onchange="onFrequencyChange()" title="Switch Dashboard & Grid Frequency View">
+        <option value="daily">📅 Daily View</option>
+        <option value="weekly">📆 Weekly View</option>
+        <option value="monthly">🗓️ Monthly View</option>
+        <option value="yearly">🎯 Yearly View</option>
+      </select>
       <select id="monthSelect" class="month-picker" onchange="onMonthYearChange()">
         <!-- Month Options -->
       </select>
@@ -1163,6 +1169,7 @@ let availableSheets = []; // 100% loaded dynamically from Google Sheets API
 let sheetMap = {};
 
 let viewMode = "habit"; // 'habit' or 'activity'
+let currentFrequency = "daily"; // 'daily', 'weekly', 'monthly', 'yearly'
 let deleteMode = false; // Toggle Delete Mode (OFF by default for table icons)
 let data = []; // Raw matrix from Google Sheets (100% dynamic)
 let habits = []; // Habit definitions & entries (100% dynamic)
@@ -1222,6 +1229,12 @@ function setViewMode(mode) {
   document.getElementById("btnViewHabit").className = `mode-btn ${mode === 'habit' ? 'active habit-mode' : ''}`;
   document.getElementById("btnViewActivity").className = `mode-btn ${mode === 'activity' ? 'active' : ''}`;
   render();
+}
+
+function onFrequencyChange() {
+  currentFrequency = document.getElementById("freqSelect").value;
+  render();
+  toast(`Switched view to ${currentFrequency.toUpperCase()} mode`);
 }
 
 function toggleDeleteMode() {
@@ -1552,16 +1565,19 @@ function switchSheetTab(name) {
 function render() {
   const monthPicker = document.getElementById("monthSelect");
   const yearPicker = document.getElementById("yearSelect");
+  const freqPicker = document.getElementById("freqSelect");
   const analyticsSec = document.getElementById("analyticsSection");
 
   if (viewMode === "habit") {
     monthPicker.style.display = "inline-block";
     yearPicker.style.display = "inline-block";
+    freqPicker.style.display = "inline-block";
     analyticsSec.style.display = "grid";
     renderHabitWorkspace();
   } else {
     monthPicker.style.display = "none";
     yearPicker.style.display = "none";
+    freqPicker.style.display = "none";
     analyticsSec.style.display = "none";
     renderActivityWorkspace();
   }
@@ -1626,10 +1642,88 @@ function getActiveMonthDateCols() {
   return monthCols.length > 0 ? monthCols : customDateCols;
 }
 
+/* Dynamic Column Aggregator for Daily, Weekly, Monthly, and Yearly View Modes */
+function getDisplayColumns() {
+  const activeCols = getActiveMonthDateCols();
+
+  if (currentFrequency === "daily") {
+    return activeCols.map(col => ({
+      type: "daily",
+      key: col.key,
+      label: col.label,
+      subLabel: col.dayName,
+      isToday: col.isToday,
+      colIndex: col.colIndex,
+      colLetter: col.colLetter,
+      rawCols: [col]
+    }));
+  }
+
+  if (currentFrequency === "weekly") {
+    const weeks = [];
+    const chunkSize = 7;
+    for (let i = 0; i < activeCols.length; i += chunkSize) {
+      const chunk = activeCols.slice(i, i + chunkSize);
+      const startLabel = chunk[0].label;
+      const endLabel = chunk[chunk.length - 1].label;
+      const weekNum = Math.floor(i / chunkSize) + 1;
+      weeks.push({
+        type: "weekly",
+        key: `W${weekNum}`,
+        label: `W${weekNum} (${startLabel} - ${endLabel})`,
+        subLabel: `${chunk.length} Days`,
+        isToday: chunk.some(c => c.isToday),
+        rawCols: chunk
+      });
+    }
+    return weeks.length > 0 ? weeks : [{
+      type: "weekly", key: "W1", label: "Week 1", subLabel: "0 Days", isToday: false, rawCols: []
+    }];
+  }
+
+  if (currentFrequency === "monthly") {
+    const monthGroups = {};
+    activeCols.forEach(col => {
+      const mIdx = col.monthIndex !== undefined ? col.monthIndex : currentMonth;
+      if (!monthGroups[mIdx]) monthGroups[mIdx] = [];
+      monthGroups[mIdx].push(col);
+    });
+
+    const monthsList = Object.keys(monthGroups).map(mIdx => {
+      const chunk = monthGroups[mIdx];
+      const mName = MONTH_NAMES[parseInt(mIdx, 10)] || MONTH_NAMES[currentMonth];
+      return {
+        type: "monthly",
+        key: `M_${mIdx}`,
+        label: `${mName} ${currentYear}`,
+        subLabel: `${chunk.length} Days`,
+        isToday: chunk.some(c => c.isToday),
+        rawCols: chunk
+      };
+    });
+    return monthsList.length > 0 ? monthsList : [{
+      type: "monthly", key: `M_${currentMonth}`, label: `${MONTH_NAMES[currentMonth]} ${currentYear}`, subLabel: "0 Days", isToday: false, rawCols: []
+    }];
+  }
+
+  if (currentFrequency === "yearly") {
+    return [{
+      type: "yearly",
+      key: `Y_${currentYear}`,
+      label: `Year ${currentYear}`,
+      subLabel: `${activeCols.length} Days Tracked`,
+      isToday: activeCols.some(c => c.isToday),
+      rawCols: activeCols
+    }];
+  }
+
+  return [];
+}
+
 /* ================= HABIT WORKSPACE RENDERER ================= */
 function renderHabitWorkspace() {
   document.getElementById("heroTitle").textContent = `${currentSheet}`;
-  document.getElementById("heroTabType").textContent = "🔥 Habit Checkmark Mode";
+  document.getElementById("heroTabType").textContent = `🔥 Habit Checkmark Mode • ${currentFrequency.toUpperCase()} VIEW`;
   document.getElementById("heroDesc").textContent = "Track daily checkmarks, drag & drop to reorder habits, configure target frequencies (Daily, 1x/Week, 1x/Month, 4x/Year), and analyze weekly progress. 100% online synced with Google Sheets (Supports up to 18,278 columns and 10,000,000 cells).";
 
   const heroBtns = document.getElementById("heroActionBtns");
@@ -1642,10 +1736,8 @@ function renderHabitWorkspace() {
   document.getElementById("syncCardHeading").textContent = "Overall Consistency";
   document.getElementById("overallPctBadge").style.display = "inline-block";
 
-  // Filter Date Columns for Selected Month in Dashboard Metrics
   const activeCols = getActiveMonthDateCols();
 
-  // Calculate Habit Stats Dynamically for Active Month
   let totalPossible = habits.length * Math.max(1, activeCols.length);
   let totalDone = 0;
   let totalMissed = 0;
@@ -1672,21 +1764,72 @@ function renderHabitWorkspace() {
   const overallPct = totalPossible ? Math.round((totalDone / totalPossible) * 100) : 0;
   document.getElementById("overallPctBadge").textContent = `${overallPct}%`;
 
-  document.getElementById("stat1Label").textContent = `${MONTH_NAMES[currentMonth]} ${currentYear} Completion Rate`;
-  document.getElementById("stat1Val").textContent = `${overallPct}%`;
-  document.getElementById("stat1Sub").textContent = `${totalDone} 🟢 Done / ${totalMissed} 🔴 Missed`;
+  // Frequency-Based Dashboard Metrics Updates
+  if (currentFrequency === "daily") {
+    document.getElementById("stat1Label").textContent = `${MONTH_NAMES[currentMonth]} ${currentYear} Rate`;
+    document.getElementById("stat1Val").textContent = `${overallPct}%`;
+    document.getElementById("stat1Sub").textContent = `${totalDone} 🟢 Done / ${totalMissed} 🔴 Missed`;
 
-  document.getElementById("stat2Label").textContent = "Current Streak";
-  document.getElementById("stat2Val").textContent = `${longestStreak}d`;
-  document.getElementById("stat2Sub").textContent = `Leader: ${streakLeader}`;
+    document.getElementById("stat2Label").textContent = "Current Streak";
+    document.getElementById("stat2Val").textContent = `${longestStreak}d`;
+    document.getElementById("stat2Sub").textContent = `Leader: ${streakLeader}`;
 
-  document.getElementById("stat3Label").textContent = "Active Habits";
-  document.getElementById("stat3Val").textContent = habits.length;
-  document.getElementById("stat3Sub").textContent = `${activeCols.length} Date Columns (${MONTH_SHORT[currentMonth]})`;
+    document.getElementById("stat3Label").textContent = "Active Habits";
+    document.getElementById("stat3Val").textContent = habits.length;
+    document.getElementById("stat3Sub").textContent = `${activeCols.length} Date Columns (${MONTH_SHORT[currentMonth]})`;
 
-  document.getElementById("stat4Label").textContent = "Best Record";
-  document.getElementById("stat4Val").textContent = `${bestRecord}d`;
-  document.getElementById("stat4Sub").textContent = `Record Holder: ${recordHolder}`;
+    document.getElementById("stat4Label").textContent = "Best Record";
+    document.getElementById("stat4Val").textContent = `${bestRecord}d`;
+    document.getElementById("stat4Sub").textContent = `Record Holder: ${recordHolder}`;
+  } else if (currentFrequency === "weekly") {
+    document.getElementById("stat1Label").textContent = "Weekly Goal Rate";
+    document.getElementById("stat1Val").textContent = `${overallPct}%`;
+    document.getElementById("stat1Sub").textContent = `Aggregated Weekly Performance`;
+
+    document.getElementById("stat2Label").textContent = "Weekly Leader";
+    document.getElementById("stat2Val").textContent = `${longestStreak}w`;
+    document.getElementById("stat2Sub").textContent = `Top Habit: ${streakLeader}`;
+
+    document.getElementById("stat3Label").textContent = "Weeks Tracked";
+    document.getElementById("stat3Val").textContent = Math.ceil(activeCols.length / 7);
+    document.getElementById("stat3Sub").textContent = `${activeCols.length} Days Total`;
+
+    document.getElementById("stat4Label").textContent = "Best Week Streak";
+    document.getElementById("stat4Val").textContent = `${bestRecord}w`;
+    document.getElementById("stat4Sub").textContent = `Record Holder: ${recordHolder}`;
+  } else if (currentFrequency === "monthly") {
+    document.getElementById("stat1Label").textContent = "Monthly Consistency";
+    document.getElementById("stat1Val").textContent = `${overallPct}%`;
+    document.getElementById("stat1Sub").textContent = `Average Month Completion`;
+
+    document.getElementById("stat2Label").textContent = "Month Leader";
+    document.getElementById("stat2Val").textContent = `${longestStreak}m`;
+    document.getElementById("stat2Sub").textContent = `Leader: ${streakLeader}`;
+
+    document.getElementById("stat3Label").textContent = "Active Month";
+    document.getElementById("stat3Val").textContent = `${MONTH_NAMES[currentMonth]}`;
+    document.getElementById("stat3Sub").textContent = `${currentYear}`;
+
+    document.getElementById("stat4Label").textContent = "Best Month Record";
+    document.getElementById("stat4Val").textContent = `${bestRecord}d`;
+    document.getElementById("stat4Sub").textContent = `Record Holder: ${recordHolder}`;
+  } else if (currentFrequency === "yearly") {
+    document.getElementById("stat1Label").textContent = "Annual Consistency";
+    document.getElementById("stat1Val").textContent = `${overallPct}%`;
+    document.getElementById("stat1Sub").textContent = `Year ${currentYear} Total Rate`;
+
+    document.getElementById("stat2Label").textContent = "Annual Streak";
+    document.getElementById("stat2Val").textContent = `${longestStreak}d`;
+    document.getElementById("stat2Sub").textContent = `Leader: ${streakLeader}`;
+
+    document.getElementById("stat3Label").textContent = "Yearly Habits";
+    document.getElementById("stat3Val").textContent = habits.length;
+    document.getElementById("stat3Sub").textContent = `Tracking Targets`;
+
+    document.getElementById("stat4Label").textContent = "Annual Record";
+    document.getElementById("stat4Val").textContent = `${bestRecord}d`;
+    document.getElementById("stat4Sub").textContent = `Record Holder: ${recordHolder}`;
+  }
 
   renderWeeklyBreakdown();
   renderHabitStatusList();
@@ -1727,8 +1870,9 @@ function renderHabitToolbar() {
 function renderHabitGrid() {
   const table = document.getElementById("grid");
   table.innerHTML = "";
-  document.getElementById("panelHeadTitle").textContent = `${currentSheet} (${MONTH_NAMES[currentMonth]} ${currentYear})`;
+  document.getElementById("panelHeadTitle").textContent = `${currentSheet} (${MONTH_NAMES[currentMonth]} ${currentYear} • ${currentFrequency.toUpperCase()} MODE)`;
 
+  const displayCols = getDisplayColumns();
   const q = document.getElementById("search").value.toLowerCase();
 
   const thead = document.createElement("thead");
@@ -1738,20 +1882,23 @@ function renderHabitGrid() {
   thHabit.innerHTML = `<span>HABIT</span>`;
   trHead.appendChild(thHabit);
 
-  // Dynamic Date Column Headers (Removed COL A, COL B references - Date & Day only)
-  customDateCols.forEach((colInfo) => {
+  displayCols.forEach((colInfo) => {
     const th = document.createElement("th");
     th.className = "th-date" + (colInfo.isToday ? " today" : "");
-    th.title = `Google Sheet Column ${colInfo.colLetter} - Double-click to rename`;
-    th.ondblclick = () => renameDate(colInfo.colIndex + 1);
+    if (colInfo.colIndex !== undefined) {
+      th.title = `Google Sheet Column ${colInfo.colLetter} - Double-click to rename`;
+      th.ondblclick = () => renameDate(colInfo.colIndex + 1);
+    }
 
-    const delColBtnHtml = deleteMode ? `<button class="del-mini-btn" onclick="event.stopPropagation(); deleteColumn(${colInfo.colIndex + 1}, '${escapeHtml(colInfo.label)}')" title="Delete column">✕</button>` : '';
+    const delColBtnHtml = (deleteMode && colInfo.type === "daily" && colInfo.colIndex !== undefined) 
+      ? `<button class="del-mini-btn" onclick="event.stopPropagation(); deleteColumn(${colInfo.colIndex + 1}, '${escapeHtml(colInfo.label)}')" title="Delete column">✕</button>` 
+      : '';
 
     th.innerHTML = `
       <div class="th-date-wrap">
         ${delColBtnHtml ? `<div style="margin-bottom:2px;">${delColBtnHtml}</div>` : ''}
         <div class="th-date-num">${escapeHtml(colInfo.label)}</div>
-        <div class="th-date-day">${colInfo.dayName || ''}</div>
+        <div class="th-date-day">${colInfo.subLabel || ''}</div>
       </div>
     `;
     trHead.appendChild(th);
@@ -1764,7 +1911,7 @@ function renderHabitGrid() {
   if (!accessToken) {
     const trAuth = document.createElement("tr");
     const tdAuth = document.createElement("td");
-    tdAuth.colSpan = Math.max(1, customDateCols.length + 1);
+    tdAuth.colSpan = Math.max(1, displayCols.length + 1);
     tdAuth.style.padding = "50px 20px";
     tdAuth.style.textAlign = "center";
     tdAuth.style.color = "var(--cyan)";
@@ -1782,7 +1929,7 @@ function renderHabitGrid() {
   if (habits.length === 0) {
     const trEmpty = document.createElement("tr");
     const tdEmpty = document.createElement("td");
-    tdEmpty.colSpan = Math.max(1, customDateCols.length + 1);
+    tdEmpty.colSpan = Math.max(1, displayCols.length + 1);
     tdEmpty.style.padding = "45px 20px";
     tdEmpty.style.textAlign = "center";
     tdEmpty.style.color = "var(--muted)";
@@ -1811,7 +1958,6 @@ function renderHabitGrid() {
     const tdHabit = document.createElement("td");
     tdHabit.className = "habit-col-cell";
 
-    // Inline row delete icon toggled by deleteMode
     const deleteButtonHtml = deleteMode 
       ? `<button class="btn danger" style="padding:4px 7px;font-size:11px;" onclick="deleteHabitRowDirect(${hIdx})" title="Remove Row">🗑️</button>` 
       : '';
@@ -1839,38 +1985,66 @@ function renderHabitGrid() {
     `;
     tr.appendChild(tdHabit);
 
-    customDateCols.forEach((colInfo) => {
+    displayCols.forEach((colInfo) => {
       const td = document.createElement("td");
-      const entry = habit.entries[colInfo.key] || { status: "PENDING", note: "" };
-      const statusClass = entry.status.toLowerCase();
 
-      const cellDiv = document.createElement("div");
-      cellDiv.className = `cell-habit ${statusClass}`;
-      cellDiv.title = `Cell ${colInfo.colLetter}${hIdx + 2} (${colInfo.label}): ${entry.status}${entry.note ? ' - Note: ' + entry.note : ''}`;
+      if (currentFrequency === "daily") {
+        const rawCol = colInfo.rawCols[0];
+        const entry = habit.entries[rawCol.key] || { status: "PENDING", note: "" };
+        const statusClass = entry.status.toLowerCase();
 
-      if (entry.note) {
-        const noteDot = document.createElement("span");
-        noteDot.className = "note-dot";
-        cellDiv.appendChild(noteDot);
+        const cellDiv = document.createElement("div");
+        cellDiv.className = `cell-habit ${statusClass}`;
+        cellDiv.title = `Cell ${rawCol.colLetter}${hIdx + 2} (${rawCol.label}): ${entry.status}${entry.note ? ' - Note: ' + entry.note : ''}`;
+
+        if (entry.note) {
+          const noteDot = document.createElement("span");
+          noteDot.className = "note-dot";
+          cellDiv.appendChild(noteDot);
+        }
+
+        cellDiv.onclick = (e) => {
+          e.stopPropagation();
+          toggleHabitCellStatusByKey(hIdx, rawCol.key, rawCol.colIndex);
+        };
+
+        cellDiv.oncontextmenu = (e) => {
+          e.preventDefault();
+          openNoteModalByKey(hIdx, rawCol.key, rawCol.label, rawCol.colIndex);
+        };
+
+        td.appendChild(cellDiv);
+      } else {
+        // Aggregated Weekly / Monthly / Yearly Summary Badge
+        let doneCount = 0;
+        let missedCount = 0;
+        let totalCount = colInfo.rawCols.length;
+
+        colInfo.rawCols.forEach(rawCol => {
+          const entry = habit.entries[rawCol.key];
+          if (entry && entry.status === "DONE") doneCount++;
+          else if (entry && entry.status === "MISSED") missedCount++;
+        });
+
+        const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+        const color = pct >= 70 ? "var(--green)" : pct >= 40 ? "var(--yellow)" : pct > 0 ? "var(--red)" : "var(--muted)";
+        const bg = pct >= 70 ? "rgba(53, 211, 153, 0.18)" : pct >= 40 ? "rgba(251, 191, 36, 0.18)" : pct > 0 ? "rgba(255, 82, 99, 0.18)" : "rgba(255,255,255,0.04)";
+        const border = pct >= 70 ? "rgba(53, 211, 153, 0.4)" : pct >= 40 ? "rgba(251, 191, 36, 0.4)" : pct > 0 ? "rgba(255, 82, 99, 0.4)" : "var(--line)";
+
+        const aggBadge = document.createElement("div");
+        aggBadge.style.cssText = `background:${bg};border:1px solid ${border};color:${color};padding:6px 10px;border-radius:10px;font-weight:800;font-size:12px;display:inline-flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;margin:auto;`;
+        aggBadge.title = `${colInfo.label}: ${doneCount}/${totalCount} Completed (${pct}%)`;
+        aggBadge.innerHTML = `<span>${doneCount}/${totalCount}</span><span style="font-size:10px;opacity:0.85;">${pct}%</span>`;
+        
+        td.appendChild(aggBadge);
       }
 
-      cellDiv.onclick = (e) => {
-        e.stopPropagation();
-        toggleHabitCellStatusByKey(hIdx, colInfo.key, colInfo.colIndex);
-      };
-
-      cellDiv.oncontextmenu = (e) => {
-        e.preventDefault();
-        openNoteModalByKey(hIdx, colInfo.key, colInfo.label, colInfo.colIndex);
-      };
-
-      td.appendChild(cellDiv);
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
   });
 
-  // Footer: Daily completion % summary
+  // Footer: Daily / Aggregated completion % summary
   const trFoot = document.createElement("tr");
   trFoot.style.background = "#0b1a2c";
 
@@ -1878,15 +2052,29 @@ function renderHabitGrid() {
   tdFootHead.style.fontWeight = "800";
   tdFootHead.style.fontSize = "11px";
   tdFootHead.style.color = "var(--cyan)";
-  tdFootHead.textContent = "DAILY COMPLETION %";
+  tdFootHead.textContent = `${currentFrequency.toUpperCase()} COMPLETION %`;
   trFoot.appendChild(tdFootHead);
 
-  customDateCols.forEach((colInfo) => {
+  displayCols.forEach((colInfo) => {
     let dayDone = 0;
-    habits.forEach(h => {
-      if (h.entries[colInfo.key] && h.entries[colInfo.key].status === "DONE") dayDone++;
-    });
-    const pct = habits.length ? Math.round((dayDone / habits.length) * 100) : 0;
+    let dayTotal = 0;
+
+    if (currentFrequency === "daily") {
+      const rawCol = colInfo.rawCols[0];
+      habits.forEach(h => {
+        if (h.entries[rawCol.key] && h.entries[rawCol.key].status === "DONE") dayDone++;
+      });
+      dayTotal = habits.length;
+    } else {
+      colInfo.rawCols.forEach(rawCol => {
+        habits.forEach(h => {
+          dayTotal++;
+          if (h.entries[rawCol.key] && h.entries[rawCol.key].status === "DONE") dayDone++;
+        });
+      });
+    }
+
+    const pct = dayTotal ? Math.round((dayDone / dayTotal) * 100) : 0;
     const tdFoot = document.createElement("td");
     tdFoot.style.fontSize = "10px";
     tdFoot.style.fontWeight = "800";
