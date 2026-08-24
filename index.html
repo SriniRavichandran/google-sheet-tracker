@@ -192,9 +192,10 @@ body::after { background: #00e5ff; right: -200px; top: -200px; animation-delay: 
 .btn.danger {
   color: #ff9fa8;
   border-color: rgba(255, 82, 99, 0.3);
+  background: rgba(255, 82, 99, 0.15);
 }
 .btn.danger:hover {
-  background: rgba(255, 82, 99, 0.2);
+  background: rgba(255, 82, 99, 0.28);
   border-color: var(--red);
 }
 
@@ -1143,8 +1144,9 @@ let availableSheets = []; // 100% loaded dynamically from Google Sheets API
 let sheetMap = {};
 
 let viewMode = "habit"; // 'habit' or 'activity'
+let deleteMode = false; // Toggle Delete Mode (OFF by default)
 let data = []; // Raw matrix from Google Sheets (100% dynamic)
-let habits = []; // Habit definitions & entries (100% dynamic, 0 hardcoded fallbacks!)
+let habits = []; // Habit definitions & entries (100% dynamic)
 let customDateCols = []; // [{ key: "11-AUG", label: "11-AUG", colIndex: 1, colLetter: "B", dayName: "Tue", dateObj: Date }]
 let startColIndex = 1; // 1 = Col B (if no Target col), 2 = Col C (if Target col present)
 let selected = null;
@@ -1185,6 +1187,12 @@ function setViewMode(mode) {
   render();
 }
 
+function toggleDeleteMode() {
+  deleteMode = !deleteMode;
+  render();
+  toast(`Delete Mode: ${deleteMode ? 'ENABLED 🗑️' : 'DISABLED 🔒'}`);
+}
+
 function initMonthPicker() {
   const select = document.getElementById("monthSelect");
   select.innerHTML = "";
@@ -1201,7 +1209,7 @@ function getDaysInCurrentMonth() {
   return new Date(currentYear, currentMonth + 1, 0).getDate();
 }
 
-/* Parse custom date headers dynamically from Google Sheet Row 0 (e.g. "11-AUG", "12-AUG", "10-Aug") */
+/* Parse custom date headers dynamically from Google Sheet Row 0 */
 function parseCustomDateHeader(headerText) {
   if (!headerText) return { label: "Date", dayName: "", isToday: false, monthIndex: currentMonth, dayNum: 1 };
   const str = String(headerText).trim();
@@ -1231,7 +1239,7 @@ function parseCustomDateHeader(headerText) {
   };
 }
 
-/* Detect Column Alignment Dynamically (Col B is Date vs Col B is Target) */
+/* Detect Column Alignment Dynamically */
 function detectStartColIndex(headerRow) {
   if (!headerRow || headerRow.length < 2) return 1;
   const col1 = String(headerRow[1] || "").toLowerCase().trim();
@@ -1309,7 +1317,7 @@ async function fetchSheetTabs() {
   } catch (e) { console.warn("Could not fetch sheets:", e); }
 }
 
-/* Load Sheet Strictly from Google Sheets API - 100% Dynamic */
+/* Load Sheet Strictly from Google Sheets API */
 async function loadSheet() {
   if (!accessToken) return setSync("Local Mode", "offline");
   if (isUserEditing) return;
@@ -1352,7 +1360,6 @@ async function loadSheet() {
         document.getElementById("monthSelect").value = `${currentYear}-${currentMonth}`;
       }
 
-      // Parse Habits strictly from Google Sheet rows
       for (let r = 1; r < rawValues.length; r++) {
         const row = rawValues[r];
         if (!row || !row[0] || !String(row[0]).trim()) continue;
@@ -1418,7 +1425,7 @@ function getStorageKey(type = "data") {
 }
 
 function loadLocalState() {
-  if (accessToken) return; // If Google API connected, load strictly from Google Sheets!
+  if (accessToken) return;
   const savedData = localStorage.getItem(getStorageKey("data"));
   const savedHabits = localStorage.getItem(getStorageKey("habits"));
 
@@ -1568,6 +1575,7 @@ function renderHabitToolbar() {
     { text: "＋ Add Habit", class: "success", click: openAddHabitModal },
     { text: "⏩ Auto Next Date", class: "primary", click: autoIncrementNextDate },
     { text: "📅 Populate Month (1-31)", class: "", click: populateFullMonthDates },
+    { text: deleteMode ? "🗑️ Delete Mode: ON" : "🔒 Delete Mode: OFF", class: deleteMode ? "danger" : "", click: toggleDeleteMode },
     { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet },
     { text: "↻ Refresh & Sync", class: "primary", click: refreshAll }
   ];
@@ -1585,7 +1593,9 @@ function renderHabitGrid() {
   const table = document.getElementById("grid");
   table.innerHTML = "";
   document.getElementById("panelHeadTitle").textContent = `${currentSheet} (${MONTH_NAMES[currentMonth]} ${currentYear})`;
-  document.getElementById("panelHeadHint").textContent = "Drag handle (≡) to reorder • Click cell to tick: 🟢 Done (✓) ➜ 🔴 Missed (✕) ➜ ⏸️ Skipped ➜ ⚪ Blank";
+  document.getElementById("panelHeadHint").textContent = deleteMode
+    ? "⚠️ DELETE MODE ACTIVE: Click 🗑️ button on any row to permanently delete it."
+    : "Drag handle (≡) to reorder • Click cell to tick: 🟢 Done (✓) ➜ 🔴 Missed (✕) ➜ ⏸️ Skipped ➜ ⚪ Blank";
 
   const q = document.getElementById("search").value.toLowerCase();
 
@@ -1596,7 +1606,7 @@ function renderHabitGrid() {
   thHabit.innerHTML = `<span>HABIT (COL A)</span>`;
   trHead.appendChild(thHabit);
 
-  // Dynamic Date Column Headers aligned with exact Google Sheets column letters
+  // Dynamic Date Column Headers
   customDateCols.forEach((colInfo) => {
     const th = document.createElement("th");
     th.className = "th-date" + (colInfo.isToday ? " today" : "");
@@ -1648,6 +1658,12 @@ function renderHabitGrid() {
 
     const tdHabit = document.createElement("td");
     tdHabit.className = "habit-col-cell";
+
+    // Show delete button ONLY when deleteMode is ON
+    const deleteButtonHtml = deleteMode 
+      ? `<button class="btn danger" style="padding:4px 7px;font-size:11px;" onclick="deleteHabitRowDirect(${hIdx})" title="Remove Row">🗑️</button>` 
+      : '';
+
     tdHabit.innerHTML = `
       <div class="drag-handle" title="Drag row to reorder">≡</div>
       <div class="habit-col-main">
@@ -1666,7 +1682,7 @@ function renderHabitGrid() {
       </div>
       <div style="display:flex;gap:4px;margin-left:auto;">
         <button class="btn" style="padding:4px 7px;font-size:11px;" onclick="openEditHabitModal(${hIdx})" title="Edit Habit">✏️</button>
-        <button class="btn danger" style="padding:4px 7px;font-size:11px;" onclick="deleteHabitRowDirect(${hIdx})" title="Remove Row">🗑️</button>
+        ${deleteButtonHtml}
       </div>
     `;
     tr.appendChild(tdHabit);
@@ -1818,7 +1834,7 @@ async function autoIncrementNextDate() {
   if (customDateCols.length > 0) {
     const lastCol = customDateCols[customDateCols.length - 1];
     nextDayNum = (lastCol.dayNum || 15) + 1;
-    if (lastCol.label.startsWith("Aug ") || lastCol.label.startsWith("Jan ") || lastCol.label.includes("-AUG") || lastCol.label.includes("-AUG")) {
+    if (lastCol.label.startsWith("Aug ") || lastCol.label.startsWith("Jan ") || lastCol.label.includes("-AUG")) {
       formatPattern = "DD-MMM";
     }
   }
@@ -2061,7 +2077,9 @@ function renderActivityWorkspace() {
   const grid = document.getElementById("grid");
   grid.innerHTML = "";
   document.getElementById("panelHeadTitle").textContent = currentSheet;
-  document.getElementById("panelHeadHint").textContent = "Click cell to update activity • Double-click date header to rename";
+  document.getElementById("panelHeadHint").textContent = deleteMode
+    ? "⚠️ DELETE MODE ACTIVE: Click ✕ on any column or row to delete it."
+    : "Click cell to update activity • Double-click date header to rename";
 
   if (!data.length) {
     grid.innerHTML = '<tr><td style="padding:25px;text-align:center;color:var(--muted)">No data in this sheet. Click <b>＋ Add Column</b> or <b>＋ Add Row</b> to start.</td></tr>';
@@ -2085,15 +2103,17 @@ function renderActivityWorkspace() {
       th.title = "Double-click to rename";
       th.ondblclick = () => renameDate(c + 1);
 
-      const delBtn = document.createElement("button");
-      delBtn.className = "del-mini-btn";
-      delBtn.textContent = "✕";
-      delBtn.title = "Delete column";
-      delBtn.onclick = (e) => {
-        e.stopPropagation();
-        deleteColumn(c + 1, v || `Column ${c + 1}`);
-      };
-      div.appendChild(delBtn);
+      if (deleteMode) {
+        const delBtn = document.createElement("button");
+        delBtn.className = "del-mini-btn";
+        delBtn.textContent = "✕";
+        delBtn.title = "Delete column";
+        delBtn.onclick = (e) => {
+          e.stopPropagation();
+          deleteColumn(c + 1, v || `Column ${c + 1}`);
+        };
+        div.appendChild(delBtn);
+      }
     }
     th.appendChild(div);
     head.appendChild(th);
@@ -2115,15 +2135,17 @@ function renderActivityWorkspace() {
         label.textContent = row[0] || "";
         div.appendChild(label);
 
-        const delBtn = document.createElement("button");
-        delBtn.className = "del-mini-btn";
-        delBtn.textContent = "✕";
-        delBtn.title = "Delete row";
-        delBtn.onclick = (e) => {
-          e.stopPropagation();
-          deleteRow(i + 2, row[0] || `Row ${i + 2}`);
-        };
-        div.appendChild(delBtn);
+        if (deleteMode) {
+          const delBtn = document.createElement("button");
+          delBtn.className = "del-mini-btn";
+          delBtn.textContent = "✕";
+          delBtn.title = "Delete row";
+          delBtn.onclick = (e) => {
+            e.stopPropagation();
+            deleteRow(i + 2, row[0] || `Row ${i + 2}`);
+          };
+          div.appendChild(delBtn);
+        }
         td.appendChild(div);
       } else {
         const div = document.createElement("div");
@@ -2167,6 +2189,7 @@ function renderActivityToolbar() {
     { text: "＋ Add Column", class: "", click: addDate },
     { text: "＋ Add Row", class: "", click: addTime },
     { text: "🧹 Clear Cell", class: "danger", click: clearSelected },
+    { text: deleteMode ? "🗑️ Delete Mode: ON" : "🔒 Delete Mode: OFF", class: deleteMode ? "danger" : "", click: toggleDeleteMode },
     { text: "🗑️ Delete Column", class: "danger", click: deleteColumnPrompt },
     { text: "🗑️ Delete Row", class: "danger", click: deleteRowPrompt },
     { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet },
@@ -2669,7 +2692,7 @@ async function updateSingleHabitCellInGoogleSheet(habitIndex, colIndex, status, 
   }
 }
 
-/* Clear Sheet First Then Write Full Habits to Google Sheet - 100% Dynamic */
+/* Clear Sheet First Then Write Full Habits to Google Sheet */
 async function saveFullHabitsToGoogleSheet() {
   if (!accessToken) return;
 
