@@ -1144,7 +1144,7 @@ let availableSheets = []; // 100% loaded dynamically from Google Sheets API
 let sheetMap = {};
 
 let viewMode = "habit"; // 'habit' or 'activity'
-let deleteMode = false; // Toggle Delete Mode (OFF by default)
+let deleteMode = false; // Toggle Delete Mode (OFF by default for table icons)
 let data = []; // Raw matrix from Google Sheets (100% dynamic)
 let habits = []; // Habit definitions & entries (100% dynamic)
 let customDateCols = []; // [{ key: "11-AUG", label: "11-AUG", colIndex: 1, colLetter: "B", dayName: "Tue", dateObj: Date }]
@@ -1190,7 +1190,7 @@ function setViewMode(mode) {
 function toggleDeleteMode() {
   deleteMode = !deleteMode;
   render();
-  toast(`Delete Mode: ${deleteMode ? 'ENABLED 🗑️' : 'DISABLED 🔒'}`);
+  toast(`Table Trash Icons: ${deleteMode ? 'VISIBLE 🗑️' : 'HIDDEN 🔒'}`);
 }
 
 function initMonthPicker() {
@@ -1587,15 +1587,16 @@ function renderHabitToolbar() {
   container.innerHTML = "";
   container.appendChild(searchInput);
 
+  // ALWAYS VISIBLE Individual Action Buttons in Toolbar!
   const btns = [
     { text: "＋ Add Habit", class: "success", click: openAddHabitModal },
     { text: "⏩ Auto Next Date", class: "primary", click: autoIncrementNextDate },
     { text: "📅 Populate Month (1-31)", class: "", click: populateFullMonthDates },
-    { text: deleteMode ? "🗑️ Delete Mode: ON" : "🔒 Delete Mode: OFF", class: deleteMode ? "danger" : "", click: toggleDeleteMode },
-    { text: "🧹 Clear Cell", class: "danger", click: clearSelected, isDeleteBtn: true },
-    { text: "🗑️ Delete Row", class: "danger", click: deleteRowPrompt, isDeleteBtn: true },
-    { text: "🗑️ Delete Column", class: "danger", click: deleteColumnPrompt, isDeleteBtn: true },
-    { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet, isDeleteBtn: true },
+    { text: "🧹 Clear Cell", class: "danger", click: clearSelected },
+    { text: "🗑️ Delete Row", class: "danger", click: deleteRowPrompt },
+    { text: "🗑️ Delete Column", class: "danger", click: deleteColumnPrompt },
+    { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet },
+    { text: deleteMode ? "🗑️ Table Trash Icons: ON" : "🔒 Table Trash Icons: OFF", class: deleteMode ? "danger" : "", click: toggleDeleteMode },
     { text: "↻ Refresh & Sync", class: "primary", click: refreshAll }
   ];
 
@@ -1604,9 +1605,6 @@ function renderHabitToolbar() {
     btn.className = `btn ${b.class}`;
     btn.textContent = b.text;
     btn.onclick = b.click;
-    if (b.isDeleteBtn) {
-      btn.style.display = deleteMode ? "inline-flex" : "none";
-    }
     container.appendChild(btn);
   });
 }
@@ -1616,7 +1614,7 @@ function renderHabitGrid() {
   table.innerHTML = "";
   document.getElementById("panelHeadTitle").textContent = `${currentSheet} (${MONTH_NAMES[currentMonth]} ${currentYear})`;
   document.getElementById("panelHeadHint").textContent = deleteMode
-    ? "⚠️ DELETE MODE ACTIVE: Click 🗑️ / ✕ on any row, column, or toolbar button to permanently delete."
+    ? "⚠️ INLINE TRASH ICONS VISIBLE: Click 🗑️ / ✕ directly on any row or column to delete it."
     : "Drag handle (≡) to reorder • Click cell to tick: 🟢 Done (✓) ➜ 🔴 Missed (✕) ➜ ⏸️ Skipped ➜ ⚪ Blank";
 
   const q = document.getElementById("search").value.toLowerCase();
@@ -1701,7 +1699,7 @@ function renderHabitGrid() {
     const tdHabit = document.createElement("td");
     tdHabit.className = "habit-col-cell";
 
-    // Show delete button ONLY when deleteMode is ON
+    // Inline row delete icon toggled by deleteMode
     const deleteButtonHtml = deleteMode 
       ? `<button class="btn danger" style="padding:4px 7px;font-size:11px;" onclick="deleteHabitRowDirect(${hIdx})" title="Remove Row">🗑️</button>` 
       : '';
@@ -1826,10 +1824,6 @@ function handleDrop(e, targetIdx, tr) {
 
 /* Remove Row Direct Action - Deletes physically from Google Sheets */
 async function deleteHabitRowDirect(hIdx) {
-  if (!deleteMode) {
-    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to delete.");
-    return;
-  }
   if (!accessToken) return googleLogin();
   const h = habits[hIdx];
   if (!h) return;
@@ -2118,7 +2112,7 @@ function renderActivityWorkspace() {
   grid.innerHTML = "";
   document.getElementById("panelHeadTitle").textContent = currentSheet;
   document.getElementById("panelHeadHint").textContent = deleteMode
-    ? "⚠️ DELETE MODE ACTIVE: Click ✕ on any column or row to delete it."
+    ? "⚠️ INLINE TRASH ICONS VISIBLE: Click ✕ directly on any column or row to delete it."
     : "Click cell to update activity • Double-click date header to rename";
 
   if (!data.length) {
@@ -2225,14 +2219,15 @@ function renderActivityToolbar() {
   container.innerHTML = "";
   container.appendChild(searchInput);
 
+  // ALWAYS VISIBLE Individual Action Buttons in Toolbar!
   const btns = [
     { text: "＋ Add Column", class: "", click: addDate },
     { text: "＋ Add Row", class: "", click: addTime },
-    { text: deleteMode ? "🗑️ Delete Mode: ON" : "🔒 Delete Mode: OFF", class: deleteMode ? "danger" : "", click: toggleDeleteMode },
-    { text: "🧹 Clear Cell", class: "danger", click: clearSelected, isDeleteBtn: true },
-    { text: "🗑️ Delete Column", class: "danger", click: deleteColumnPrompt, isDeleteBtn: true },
-    { text: "🗑️ Delete Row", class: "danger", click: deleteRowPrompt, isDeleteBtn: true },
-    { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet, isDeleteBtn: true },
+    { text: "🧹 Clear Cell", class: "danger", click: clearSelected },
+    { text: "🗑️ Delete Column", class: "danger", click: deleteColumnPrompt },
+    { text: "🗑️ Delete Row", class: "danger", click: deleteRowPrompt },
+    { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet },
+    { text: deleteMode ? "🗑️ Table Trash Icons: ON" : "🔒 Table Trash Icons: OFF", class: deleteMode ? "danger" : "", click: toggleDeleteMode },
     { text: "↻ Refresh & Sync", class: "primary", click: refreshAll }
   ];
 
@@ -2241,9 +2236,6 @@ function renderActivityToolbar() {
     btn.className = `btn ${b.class}`;
     btn.textContent = b.text;
     btn.onclick = b.click;
-    if (b.isDeleteBtn) {
-      btn.style.display = deleteMode ? "inline-flex" : "none";
-    }
     container.appendChild(btn);
   });
 }
@@ -2254,13 +2246,6 @@ function openEditor(row, col, time, date, value) {
   document.getElementById("mTime").value = time;
   document.getElementById("mDate").value = date;
   document.getElementById("mValue").value = value;
-
-  // Toggle modal delete/clear buttons visibility based on deleteMode
-  const mClearBtn = document.getElementById("mClearCellBtn");
-  const mDelRowBtn = document.getElementById("mDeleteRowBtn");
-  if (mClearBtn) mClearBtn.style.display = deleteMode ? "inline-flex" : "none";
-  if (mDelRowBtn) mDelRowBtn.style.display = deleteMode ? "inline-flex" : "none";
-
   document.getElementById("modalBg").style.display = "flex";
   document.getElementById("mValue").focus();
 }
@@ -2293,10 +2278,6 @@ async function saveCell() {
 }
 
 async function clearCellDirect(row, col) {
-  if (!deleteMode) {
-    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to clear cells.");
-    return;
-  }
   if (!accessToken) return googleLogin();
   markUserEditing();
   data[row - 1][col - 1] = "";
@@ -2312,10 +2293,6 @@ async function clearCellDirect(row, col) {
 }
 
 async function clearSelected() {
-  if (!deleteMode) {
-    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to clear cells.");
-    return;
-  }
   if (selected) {
     await clearCellDirect(selected.row, selected.col);
     closeModal();
@@ -2334,20 +2311,12 @@ async function clearSelected() {
 }
 
 async function modalClearCell() {
-  if (!deleteMode) {
-    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to clear cells.");
-    return;
-  }
   if (!selected) return;
   document.getElementById("mValue").value = "";
   await saveCell();
 }
 
 async function modalDeleteRow() {
-  if (!deleteMode) {
-    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to delete rows.");
-    return;
-  }
   if (!selected) return;
   const rowToDelete = selected.row;
   const timeName = document.getElementById("mTime").value || `Row ${rowToDelete}`;
@@ -2403,10 +2372,6 @@ async function addTime() {
 }
 
 async function deleteColumn(col1Based, colNameText = "") {
-  if (!deleteMode) {
-    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to delete columns.");
-    return;
-  }
   if (!accessToken) return googleLogin();
   if (!confirm(`Are you sure you want to delete column "${colNameText || col1Based}" from Google Sheet?`)) return;
   markUserEditing();
@@ -2429,10 +2394,6 @@ async function deleteColumn(col1Based, colNameText = "") {
 }
 
 async function deleteColumnPrompt() {
-  if (!deleteMode) {
-    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to delete columns.");
-    return;
-  }
   if (!data.length || data[0].length <= 1) return alert("No columns to delete.");
   const colList = data[0].slice(1).map((v, i) => `${i + 2}: ${v || ('Column ' + (i + 2))}`).join("\n");
   const choice = prompt("Enter column number to delete:\n\n" + colList);
@@ -2443,10 +2404,6 @@ async function deleteColumnPrompt() {
 }
 
 async function deleteRow(row1Based, rowNameText = "") {
-  if (!deleteMode) {
-    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to delete rows.");
-    return;
-  }
   if (!accessToken) return googleLogin();
   if (!confirm(`Are you sure you want to delete row "${rowNameText || row1Based}" from Google Sheet?`)) return;
   markUserEditing();
@@ -2470,10 +2427,6 @@ async function deleteRow(row1Based, rowNameText = "") {
 }
 
 async function deleteRowPrompt() {
-  if (!deleteMode) {
-    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to delete rows.");
-    return;
-  }
   if (data.length <= 1) return alert("No rows to delete.");
   const rowList = data.slice(1).map((r, i) => `${i + 2}: ${r[0] || ('Row ' + (i + 2))}`).join("\n");
   const choice = prompt("Enter row number to delete:\n\n" + rowList);
@@ -2528,10 +2481,6 @@ async function addNewSheet() {
 }
 
 async function deleteCurrentSheet() {
-  if (!deleteMode) {
-    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to delete sheet tabs.");
-    return;
-  }
   if (!accessToken) return googleLogin();
   if (availableSheets.length <= 1) return alert("Cannot delete the only sheet.");
   if (!confirm(`Permanently delete the sheet "${currentSheet}" from Google Sheet?`)) return;
@@ -2580,7 +2529,7 @@ function openEditHabitModal(hIdx) {
   document.getElementById("hName").value = h.title;
   document.getElementById("hIcon").value = h.icon || "🏋️";
   document.getElementById("hTarget").value = h.target || "Daily";
-  document.getElementById("hDeleteBtn").style.display = deleteMode ? "inline-flex" : "none";
+  document.getElementById("hDeleteBtn").style.display = "inline-flex";
   document.getElementById("habitModalBg").style.display = "flex";
 }
 
@@ -2617,10 +2566,6 @@ function saveHabitForm() {
 }
 
 async function deleteCurrentEditingHabit() {
-  if (!deleteMode) {
-    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to delete habits.");
-    return;
-  }
   if (!accessToken) return googleLogin();
   if (editingHabitIndex === null) return;
   const h = habits[editingHabitIndex];
@@ -2672,9 +2617,6 @@ function openNoteModalByKey(habitIndex, colKey, colLabel, colIndex) {
   document.getElementById("nDateText").value = `Column ${colName(colIndex + 1)} (${colLabel})`;
   document.getElementById("nNoteText").value = entry.note || "";
 
-  const nClearBtn = document.getElementById("nClearCellBtn");
-  if (nClearBtn) nClearBtn.style.display = deleteMode ? "inline-flex" : "none";
-
   setNoteStatusUI(entry.status);
   document.getElementById("noteModalBg").style.display = "flex";
   document.getElementById("nNoteText").focus();
@@ -2722,10 +2664,6 @@ async function saveHabitNoteModal() {
 }
 
 async function clearHabitNoteCell() {
-  if (!deleteMode) {
-    toast("Delete Mode is OFF. Turn ON 'Delete Mode' to clear cells.");
-    return;
-  }
   if (!selectedHabitCell) return;
   if (!accessToken) return googleLogin();
   markUserEditing();
@@ -2773,7 +2711,7 @@ async function saveFullHabitsToGoogleSheet() {
 
   try {
     const clearRange = `'${currentSheet}'!A1:Z500`;
-    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}:clear`, {
+    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(clearRange)}:clear`, {
       method: "POST"
     });
   } catch (e) {
