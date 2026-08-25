@@ -148,40 +148,6 @@ body::after { background: var(--cyan); right: -200px; top: -200px; animation-del
   flex-wrap: wrap;
 }
 
-/* Mode Switcher Pills */
-.mode-switcher {
-  display: flex;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 3px;
-  gap: 3px;
-}
-.mode-btn {
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  padding: 7px 14px;
-  border-radius: 9px;
-  font-weight: 800;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.mode-btn:hover { color: #fff; }
-.mode-btn.active {
-  background: linear-gradient(135deg, var(--blue), var(--cyan));
-  color: #fff;
-  box-shadow: 0 4px 15px var(--accent-glow);
-}
-.mode-btn.active.habit-mode {
-  background: linear-gradient(135deg, var(--cyan), var(--blue));
-  box-shadow: 0 4px 15px var(--accent-glow);
-}
-
 /* Buttons */
 .btn {
   border: 1px solid var(--line);
@@ -616,42 +582,6 @@ tr.drag-over {
 }
 .drag-handle:hover { color: var(--cyan); transform: scale(1.2); }
 
-/* Activity Cell */
-.cell {
-  min-height: 38px;
-  padding: 8px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: 0.2s;
-  white-space: pre-wrap;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.02);
-}
-.cell:hover {
-  background: var(--today-bg);
-  box-shadow: inset 0 0 0 1px var(--today-border);
-}
-.cell-text { flex: 1; word-break: break-word; text-align: left; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
-.cell-clear-icon {
-  display: none;
-  color: #ff9fa8;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 5px;
-  border-radius: 4px;
-  background: rgba(255, 107, 122, 0.18);
-  border: 1px solid rgba(255, 107, 122, 0.3);
-  margin-left: 4px;
-  flex-shrink: 0;
-  cursor: pointer;
-}
-.cell:hover .cell-clear-icon { display: inline-block; }
-.empty { color: var(--muted); font-style: italic; }
-
 /* Interactive Habit Cell with Ticks */
 .habit-col-cell { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .habit-col-main { display: flex; align-items: center; gap: 8px; overflow: hidden; flex: 1; }
@@ -828,10 +758,10 @@ tr.drag-over {
   transition: 0.2s;
 }
 .status-opt:hover { border-color: var(--cyan); }
-.status-opt.active[data-val="DONE"], .status-opt.active[data-mval="DONE"] { background: rgba(53, 211, 153, 0.25); border-color: var(--green); color: var(--green); }
-.status-opt.active[data-val="MISSED"], .status-opt.active[data-mval="MISSED"] { background: rgba(255, 82, 99, 0.25); border-color: var(--red); color: var(--red); }
-.status-opt.active[data-val="SKIP"], .status-opt.active[data-mval="SKIP"] { background: rgba(251, 191, 36, 0.25); border-color: var(--yellow); color: var(--yellow); }
-.status-opt.active[data-val="PENDING"], .status-opt.active[data-mval="NONE"] { background: rgba(255, 255, 255, 0.1); border-color: #fff; }
+.status-opt.active[data-val="DONE"] { background: rgba(53, 211, 153, 0.25); border-color: var(--green); color: var(--green); }
+.status-opt.active[data-val="MISSED"] { background: rgba(255, 82, 99, 0.25); border-color: var(--red); color: var(--red); }
+.status-opt.active[data-val="SKIP"] { background: rgba(251, 191, 36, 0.25); border-color: var(--yellow); color: var(--yellow); }
+.status-opt.active[data-val="PENDING"] { background: rgba(255, 255, 255, 0.1); border-color: #fff; }
 
 .modal-actions {
   display: flex;
@@ -928,7 +858,6 @@ tr.drag-over {
 
 @media (max-width: 480px) {
   .brand-text h1 { font-size: 15px; }
-  .mode-btn { padding: 6px 10px; font-size: 11px; }
   .stats-grid { grid-template-columns: 1fr; }
   th:first-child, td:first-child { min-width: 175px; max-width: 200px; padding: 6px 8px; }
   .habit-name { font-size: 12px; }
@@ -950,12 +879,6 @@ tr.drag-over {
   </div>
 
   <div class="top-actions">
-    <!-- Mode Switcher -->
-    <div class="mode-switcher">
-      <button id="btnViewHabit" class="mode-btn active habit-mode" onclick="setViewMode('habit')">🔥 Habit Tracker (Ticks)</button>
-      <button id="btnViewActivity" class="mode-btn" onclick="setViewMode('activity')">📋 Schedule / Activity</button>
-    </div>
-
     <!-- Professional 8 Theme Preferences Dropdown Selector -->
     <select id="themeSelect" class="month-picker" onchange="changeTheme(this.value)" title="Choose Professional Color Theme Preference">
       <option value="relentless">🔥 RS-25G Crimson</option>
@@ -1110,35 +1033,6 @@ tr.drag-over {
   </section>
 </main>
 
-<!-- Activity Edit Modal (Activity View) -->
-<div class="modal-bg" id="modalBg">
-  <div class="modal">
-    <h2>Update Activity / Schedule</h2>
-    <div class="field"><label>TIME / ROW</label><input id="mTime" class="input" readonly></div>
-    <div class="field"><label>DATE / COL</label><input id="mDate" class="input" readonly></div>
-    <div class="field">
-      <label>STATUS TICK & COMPLETION</label>
-      <div class="status-picker" id="mStatusPicker">
-        <div class="status-opt active" data-mval="DONE" onclick="setActivityModalStatus('DONE')">🟢 Completed (✓)</div>
-        <div class="status-opt" data-mval="MISSED" onclick="setActivityModalStatus('MISSED')">🔴 Missed (✕)</div>
-        <div class="status-opt" data-mval="SKIP" onclick="setActivityModalStatus('SKIP')">⏸️ Skipped</div>
-        <div class="status-opt" data-mval="NONE" onclick="setActivityModalStatus('NONE')">⚪ Text Only</div>
-      </div>
-    </div>
-    <div class="field"><label>ACTIVITY DETAILS</label><textarea id="mValue" class="input" placeholder="Enter schedule activity details..."></textarea></div>
-    <div class="modal-actions">
-      <div class="modal-btn-group">
-        <button class="btn danger" id="mClearCellBtn" onclick="modalClearCell()">🧹 Clear Cell</button>
-        <button class="btn danger" id="mDeleteRowBtn" onclick="modalDeleteRow()">🗑️ Delete Row</button>
-      </div>
-      <div class="modal-btn-group">
-        <button class="btn" onclick="closeModal()">Cancel</button>
-        <button class="btn primary" onclick="saveCell()">Save to Sheet</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- Habit Add / Edit Modal -->
 <div class="modal-bg" id="habitModalBg">
   <div class="modal">
@@ -1238,7 +1132,6 @@ let currentSheet = CONFIG.SHEET_NAME;
 let availableSheets = []; // 100% loaded dynamically from Google Sheets API
 let sheetMap = {};
 
-let viewMode = "habit"; // 'habit' or 'activity'
 let currentFrequency = "daily"; // 'daily', 'weekly', 'monthly', 'yearly'
 let deleteMode = false; // Toggle Delete Mode (OFF by default: Deletion buttons DISABLED until toggled ON)
 let data = []; // Raw matrix from Google Sheets (100% dynamic)
@@ -1252,7 +1145,6 @@ let draggedHabitIdx = null;
 let isUserEditing = false;
 let userEditTimer = null;
 let deferredPrompt = null;
-let activityModalStatus = "DONE";
 
 let currentYear = 2026;
 let currentMonth = 7; // 0-indexed: 7 = August
@@ -1493,13 +1385,6 @@ function markUserEditing() {
   isUserEditing = true;
   if (userEditTimer) clearTimeout(userEditTimer);
   userEditTimer = setTimeout(() => { isUserEditing = false; }, 8000);
-}
-
-function setViewMode(mode) {
-  viewMode = mode;
-  document.getElementById("btnViewHabit").className = `mode-btn ${mode === 'habit' ? 'active habit-mode' : ''}`;
-  document.getElementById("btnViewActivity").className = `mode-btn ${mode === 'activity' ? 'active' : ''}`;
-  render();
 }
 
 function onFrequencyChange() {
@@ -1839,19 +1724,11 @@ function render() {
   const freqPicker = document.getElementById("freqSelect");
   const analyticsSec = document.getElementById("analyticsSection");
 
-  if (viewMode === "habit") {
-    monthPicker.style.display = "inline-block";
-    yearPicker.style.display = "inline-block";
-    freqPicker.style.display = "inline-block";
-    analyticsSec.style.display = "grid";
-    renderHabitWorkspace();
-  } else {
-    monthPicker.style.display = "none";
-    yearPicker.style.display = "none";
-    freqPicker.style.display = "none";
-    analyticsSec.style.display = "none";
-    renderActivityWorkspace();
-  }
+  monthPicker.style.display = "inline-block";
+  yearPicker.style.display = "inline-block";
+  freqPicker.style.display = "inline-block";
+  analyticsSec.style.display = "grid";
+  renderHabitWorkspace();
 }
 
 /* Column-Wise Horizontal Scroll Helper */
@@ -2723,333 +2600,8 @@ function renderHabitStatusList() {
   });
 }
 
-/* ================= ACTIVITY WORKSPACE RENDERER ================= */
-function renderActivityWorkspace() {
-  document.getElementById("heroTitle").textContent = `RS-25G - ${currentSheet}`;
-  document.getElementById("heroTabType").textContent = "📋 Schedule / Activity Planner Mode";
-  document.getElementById("heroDesc").textContent = "Manage daily activity schedules, time slots, and team tasks. Synchronized directly with Google Sheets.";
-
-  const heroBtns = document.getElementById("heroActionBtns");
-  heroBtns.innerHTML = `
-    <button class="btn success" onclick="addTime()">＋ Add Time Row</button>
-    <button class="btn primary" onclick="addDate()">＋ Add Date Column</button>
-  `;
-
-  document.getElementById("syncCardHeading").textContent = "Sheet Overview";
-  document.getElementById("overallPctBadge").style.display = "none";
-
-  let filled = 0;
-  if (data.length > 1) {
-    data.slice(1).forEach(r => r.slice(1).forEach(v => { if (v && v.trim()) filled++; }));
-  }
-  document.getElementById("stat1Label").textContent = "Current Sheet";
-  document.getElementById("stat1Val").textContent = currentSheet;
-  document.getElementById("stat1Sub").textContent = "Active Sheet Tab";
-
-  document.getElementById("stat2Label").textContent = "Time Slots";
-  document.getElementById("stat2Val").textContent = Math.max(0, data.length - 1);
-  document.getElementById("stat2Sub").textContent = "Rows configured";
-
-  document.getElementById("stat3Label").textContent = "Dates / Columns";
-  document.getElementById("stat3Val").textContent = Math.max(0, (data[0]?.length || 1) - 1);
-  document.getElementById("stat3Sub").textContent = "Columns configured";
-
-  document.getElementById("stat4Label").textContent = "Filled Entries";
-  document.getElementById("stat4Val").textContent = filled;
-  document.getElementById("stat4Sub").textContent = "Logged activities";
-
-  renderActivityToolbar();
-
-  const grid = document.getElementById("grid");
-  grid.innerHTML = "";
-  document.getElementById("panelHeadTitle").textContent = currentSheet;
-
-  if (!data.length) {
-    grid.innerHTML = '<tr><td style="padding:25px;text-align:center;color:var(--muted)">No data in this sheet. Click <b>＋ Add Column</b> or <b>＋ Add Row</b> to start.</td></tr>';
-    return;
-  }
-
-  const q = document.getElementById("search").value.toLowerCase();
-  const thead = document.createElement("thead");
-  const head = document.createElement("tr");
-
-  data[0].forEach((v, c) => {
-    const th = document.createElement("th");
-    const div = document.createElement("div");
-    div.className = "th-content";
-
-    const label = document.createElement("span");
-    label.textContent = v || (c === 0 ? "HABIT" : `Column ${c + 1}`);
-    div.appendChild(label);
-
-    if (c > 0) {
-      th.title = "Double-click to rename";
-      th.ondblclick = () => renameDate(c + 1);
-
-      if (deleteMode) {
-        const delBtn = document.createElement("button");
-        delBtn.className = "del-mini-btn";
-        delBtn.textContent = "✕";
-        delBtn.title = "Delete column";
-        delBtn.onclick = (e) => {
-          e.stopPropagation();
-          deleteColumn(c + 1, v || `Column ${c + 1}`);
-        };
-        div.appendChild(delBtn);
-      }
-    }
-    th.appendChild(div);
-    head.appendChild(th);
-  });
-  thead.appendChild(head);
-  grid.appendChild(thead);
-
-  const body = document.createElement("tbody");
-  data.slice(1).forEach((row, i) => {
-    if (q && !row.join(" ").toLowerCase().includes(q)) return;
-    const tr = document.createElement("tr");
-    for (let c = 0; c < data[0].length; c++) {
-      const td = document.createElement("td");
-      if (c === 0) {
-        td.style.fontWeight = "700";
-        const div = document.createElement("div");
-        div.className = "row-head-content";
-        const label = document.createElement("span");
-        label.textContent = row[0] || "";
-        div.appendChild(label);
-
-        if (deleteMode) {
-          const delBtn = document.createElement("button");
-          delBtn.className = "del-mini-btn";
-          delBtn.textContent = "✕";
-          delBtn.title = "Delete row";
-          delBtn.onclick = (e) => {
-            e.stopPropagation();
-            deleteRow(i + 2, row[0] || `Row ${i + 2}`);
-          };
-          div.appendChild(delBtn);
-        }
-        td.appendChild(div);
-      } else {
-        const div = document.createElement("div");
-        div.className = "cell";
-        const v = row[c] || "";
-        const parsed = parseHabitCell(v);
-
-        const textSpan = document.createElement("span");
-        textSpan.className = "cell-text";
-
-        if (!v || !v.trim()) {
-          textSpan.innerHTML = '<span class="empty">Click to add activity...</span>';
-        } else {
-          let badgeHtml = "";
-          if (parsed.status === "DONE") {
-            badgeHtml = `<span class="badge-done" style="margin-right:6px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:900;">🟢 ✓</span>`;
-          } else if (parsed.status === "MISSED") {
-            badgeHtml = `<span class="badge-missed" style="margin-right:6px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:900;">🔴 ✕</span>`;
-          } else if (parsed.status === "SKIP") {
-            badgeHtml = `<span style="background:rgba(251,191,36,0.2);color:var(--yellow);border:1px solid rgba(251,191,36,0.4);margin-right:6px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:900;">⏸️</span>`;
-          }
-
-          let contentText = "";
-          if (parsed.note) {
-            contentText = escapeHtml(parsed.note);
-          } else if (parsed.status !== "PENDING" && parsed.status !== "ACTIVITY") {
-            contentText = escapeHtml(parsed.status);
-          } else {
-            contentText = escapeHtml(v);
-          }
-
-          textSpan.innerHTML = `${badgeHtml}<span>${contentText}</span>`;
-        }
-
-        div.appendChild(textSpan);
-
-        if (v && v.trim()) {
-          const clrBtn = document.createElement("span");
-          clrBtn.className = "cell-clear-icon";
-          clrBtn.textContent = "✕ Clear";
-          clrBtn.title = "Clear this cell";
-          clrBtn.onclick = (e) => {
-            e.stopPropagation();
-            clearCellDirect(i + 2, c + 1);
-          };
-          div.appendChild(clrBtn);
-        }
-
-        div.onclick = () => openEditor(i + 2, c + 1, row[0] || "", data[0][c] || "", v);
-        td.appendChild(div);
-      }
-      tr.appendChild(td);
-    }
-    body.appendChild(tr);
-  });
-  grid.appendChild(body);
-}
-
-function renderActivityToolbar() {
-  const container = document.getElementById("toolbarContainer");
-  const searchInput = document.getElementById("search");
-  container.innerHTML = "";
-  container.appendChild(searchInput);
-
-  // Individual Action Buttons with Safety Lock when Delete Mode is OFF
-  const btns = [
-    { text: "＋ Add Column", class: "", click: addDate },
-    { text: "＋ Add Row", class: "", click: addTime },
-    { text: "🧹 Clear Cell", class: "danger", click: clearSelected, isDeleteAction: true },
-    { text: "🗑️ Delete Column", class: "danger", click: deleteColumnPrompt, isDeleteAction: true },
-    { text: "🗑️ Delete Row", class: "danger", click: deleteRowPrompt, isDeleteAction: true },
-    { text: "🗑️ Delete Sheet", class: "danger", click: deleteCurrentSheet, isDeleteAction: true },
-    { text: deleteMode ? "🗑️ Delete Mode: ON" : "🔒 Delete Mode: OFF", class: deleteMode ? "danger" : "", click: toggleDeleteMode, isMasterToggle: true },
-    { text: "↻ Refresh & Sync", class: "primary", click: refreshAll, alignRight: true }
-  ];
-
-  btns.forEach(b => {
-    const btn = document.createElement("button");
-    btn.className = `btn ${b.class}`;
-    btn.textContent = b.text;
-
-    if (b.isDeleteAction && !deleteMode) {
-      btn.disabled = true;
-      btn.classList.add("disabled-btn");
-      btn.title = "Delete Mode is OFF. Click '🔒 Delete Mode: OFF' to enable deletion.";
-    } else {
-      btn.onclick = b.click;
-    }
-
-    if (b.alignRight) btn.style.marginLeft = "auto";
-    container.appendChild(btn);
-  });
-}
-
-/* ================= ACTIVITY CELL MODALS & EDITING ================= */
-function setActivityModalStatus(st) {
-  activityModalStatus = st;
-  document.querySelectorAll("#mStatusPicker .status-opt").forEach(opt => {
-    if (opt.dataset.mval === st) opt.classList.add("active");
-    else opt.classList.remove("active");
-  });
-}
-
-function openEditor(row, col, time, date, rawValue) {
-  selected = { row, col };
-  document.getElementById("mTime").value = time;
-  document.getElementById("mDate").value = date;
-
-  const parsed = parseHabitCell(rawValue);
-  let statusToSet = "DONE";
-  let detailText = rawValue || "";
-
-  if (parsed.status === "DONE") {
-    statusToSet = "DONE";
-    detailText = parsed.note || "";
-  } else if (parsed.status === "MISSED") {
-    statusToSet = "MISSED";
-    detailText = parsed.note || "";
-  } else if (parsed.status === "SKIP") {
-    statusToSet = "SKIP";
-    detailText = parsed.note || "";
-  } else if (parsed.status === "PENDING" && !parsed.note) {
-    statusToSet = "DONE";
-    detailText = "";
-  } else {
-    statusToSet = "NONE";
-    detailText = rawValue || "";
-  }
-
-  setActivityModalStatus(statusToSet);
-  document.getElementById("mValue").value = detailText;
-  document.getElementById("mClearCellBtn").style.display = deleteMode ? "inline-flex" : "none";
-  document.getElementById("mDeleteRowBtn").style.display = deleteMode ? "inline-flex" : "none";
-  document.getElementById("modalBg").style.display = "flex";
-  document.getElementById("mValue").focus();
-}
-
-function closeModal() {
-  document.getElementById("modalBg").style.display = "none";
-  selected = null;
-}
-
-async function saveCell() {
-  if (!selected) return;
-  if (!accessToken) return googleLogin();
-  markUserEditing();
-  const detailText = document.getElementById("mValue").value.trim();
-
-  let finalValue = "";
-  if (activityModalStatus === "NONE") {
-    finalValue = detailText;
-  } else if (detailText) {
-    finalValue = `${activityModalStatus} | ${detailText}`;
-  } else {
-    finalValue = activityModalStatus;
-  }
-
-  // 1. Update local data matrix
-  data[selected.row - 1][selected.col - 1] = finalValue;
-
-  // 2. Synchronize habits array entries
-  const rIdx = selected.row - 2;
-  const colIdx = selected.col - 1;
-  const colKey = customDateCols.find(c => c.colIndex === colIdx)?.key || (data[0] ? data[0][colIdx] : null);
-
-  if (rIdx >= 0 && rIdx < habits.length) {
-    if (!habits[rIdx].entries) habits[rIdx].entries = {};
-    if (colKey) {
-      habits[rIdx].entries[colKey] = parseHabitCell(finalValue);
-    }
-  }
-
-  closeModal();
-  render();
-
-  // 3. Save cell to Google Sheet
-  const cell = colName(selected.col) + selected.row;
-  const range = `'${currentSheet}'!${cell}`;
-  try {
-    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ range, majorDimension: "ROWS", values: [[finalValue]] })
-    });
-    document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
-    toast("Saved Activity & Status to Google Sheet");
-  } catch (e) { alert(e.message); }
-}
-
-async function clearCellDirect(row, col) {
-  if (!deleteMode) return;
-  if (!accessToken) return googleLogin();
-  markUserEditing();
-  data[row - 1][col - 1] = "";
-
-  const rIdx = row - 2;
-  const colIdx = col - 1;
-  const colKey = customDateCols.find(c => c.colIndex === colIdx)?.key || (data[0] ? data[0][colIdx] : null);
-
-  if (rIdx >= 0 && rIdx < habits.length && colKey && habits[rIdx].entries) {
-    habits[rIdx].entries[colKey] = { status: "PENDING", note: "" };
-  }
-
-  render();
-
-  const cell = colName(col) + row;
-  const range = `'${currentSheet}'!${cell}`;
-  try {
-    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}:clear`, { method: "POST" });
-    document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
-    toast(`Cleared ${cell} in Google Sheet`);
-  } catch (e) { alert(e.message); }
-}
-
 async function clearSelected() {
   if (!deleteMode) return;
-  if (selected) {
-    await clearCellDirect(selected.row, selected.col);
-    closeModal();
-    return;
-  }
   if (!accessToken) return googleLogin();
   const promptCell = prompt("Enter cell coordinate (e.g. B2, C4):");
   if (!promptCell) return;
@@ -3060,63 +2612,6 @@ async function clearSelected() {
     toast(`Cleared ${cleaned} in Google Sheet`);
     loadSheet();
   } catch (e) { alert(e.message); }
-}
-
-async function modalClearCell() {
-  if (!deleteMode) return;
-  if (!selected) return;
-  document.getElementById("mValue").value = "";
-  await saveCell();
-}
-
-async function modalDeleteRow() {
-  if (!deleteMode) return;
-  if (!selected) return;
-  const rowToDelete = selected.row;
-  const timeName = document.getElementById("mTime").value || `Row ${rowToDelete}`;
-  closeModal();
-  await deleteRow(rowToDelete, timeName);
-}
-
-/* Add / Delete Columns & Rows */
-async function addDate() {
-  if (!accessToken) return googleLogin();
-  markUserEditing();
-  const date = prompt("Enter Date / Column Header (e.g., 16-Aug, Aug 17):");
-  if (!date || !date.trim()) return;
-  const colHeader = date.trim();
-
-  if (!data.length) data.push(["HABIT"]);
-  data[0].push(colHeader);
-  for (let r = 1; r < data.length; r++) data[r].push("");
-
-  buildDefaultCustomDateCols();
-  render();
-
-  await saveFullHabitsToGoogleSheet();
-  toast(`Added column "${colHeader}" to Google Sheet`);
-}
-
-async function addTime() {
-  if (!accessToken) return googleLogin();
-  markUserEditing();
-  const time = prompt("Enter Habit / Time / Row Name:");
-  if (!time || !time.trim()) return;
-  const rowTitle = time.trim();
-
-  const width = data.length > 0 ? data[0].length : 2;
-  const newRow = [rowTitle, ...Array(width - 1).fill("")];
-
-  if (!data.length) data.push(["HABIT"]);
-  data.push(newRow);
-
-  const icon = rowTitle.match(/(\p{Extended_Pictographic})/u)?.[0] || "📋";
-  habits.push({ id: "h_" + Date.now(), title: rowTitle, icon, target: "Daily", entries: {} });
-
-  render();
-
-  await saveFullHabitsToGoogleSheet();
-  toast(`Added row "${rowTitle}" to Google Sheet`);
 }
 
 async function deleteColumn(col1Based, colNameText = "") {
