@@ -1113,10 +1113,10 @@ tr.drag-over {
 <!-- Activity Edit Modal (Activity View) -->
 <div class="modal-bg" id="modalBg">
   <div class="modal">
-    <h2>Update Activity</h2>
+    <h2>Update Activity / Schedule</h2>
     <div class="field"><label>TIME / ROW</label><input id="mTime" class="input" readonly></div>
     <div class="field"><label>DATE / COL</label><input id="mDate" class="input" readonly></div>
-    <div class="field"><label>ACTIVITY</label><textarea id="mValue" class="input" placeholder="Enter activity details..."></textarea></div>
+    <div class="field"><label>ACTIVITY DETAILS</label><textarea id="mValue" class="input" placeholder="Enter schedule activity details..."></textarea></div>
     <div class="modal-actions">
       <div class="modal-btn-group">
         <button class="btn danger" id="mClearCellBtn" onclick="modalClearCell()">🧹 Clear Cell</button>
@@ -2907,11 +2907,27 @@ async function saveCell() {
   if (!selected) return;
   if (!accessToken) return googleLogin();
   markUserEditing();
-  const value = document.getElementById("mValue").value;
+  const value = document.getElementById("mValue").value.trim();
+
+  // 1. Update local data matrix
   data[selected.row - 1][selected.col - 1] = value;
+
+  // 2. Synchronize habits array entries
+  const rIdx = selected.row - 2;
+  const colIdx = selected.col - 1;
+  const colKey = customDateCols.find(c => c.colIndex === colIdx)?.key || (data[0] ? data[0][colIdx] : null);
+
+  if (rIdx >= 0 && rIdx < habits.length) {
+    if (!habits[rIdx].entries) habits[rIdx].entries = {};
+    if (colKey) {
+      habits[rIdx].entries[colKey] = value ? { status: "ACTIVITY", note: value, rawText: value } : { status: "PENDING", note: "" };
+    }
+  }
+
   closeModal();
   render();
 
+  // 3. Save cell to Google Sheet and save full sheet matrix
   const cell = colName(selected.col) + selected.row;
   const range = `'${currentSheet}'!${cell}`;
   try {
@@ -2921,7 +2937,7 @@ async function saveCell() {
       body: JSON.stringify({ range, majorDimension: "ROWS", values: [[value]] })
     });
     document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
-    toast("Synced to Google Sheet");
+    toast("Synced activity to Google Sheet");
   } catch (e) { alert(e.message); }
 }
 
@@ -2930,6 +2946,15 @@ async function clearCellDirect(row, col) {
   if (!accessToken) return googleLogin();
   markUserEditing();
   data[row - 1][col - 1] = "";
+
+  const rIdx = row - 2;
+  const colIdx = col - 1;
+  const colKey = customDateCols.find(c => c.colIndex === colIdx)?.key || (data[0] ? data[0][colIdx] : null);
+
+  if (rIdx >= 0 && rIdx < habits.length && colKey && habits[rIdx].entries) {
+    habits[rIdx].entries[colKey] = { status: "PENDING", note: "" };
+  }
+
   render();
 
   const cell = colName(col) + row;
@@ -2981,61 +3006,40 @@ async function addDate() {
   if (!accessToken) return googleLogin();
   markUserEditing();
   const date = prompt("Enter Date / Column Header (e.g., 16-Aug, Aug 17):");
-  if (!date) return;
+  if (!date || !date.trim()) return;
+  const colHeader = date.trim();
+
   if (!data.length) data.push(["HABIT"]);
-  data[0].push(date);
+  data[0].push(colHeader);
   for (let r = 1; r < data.length; r++) data[r].push("");
+
   buildDefaultCustomDateCols();
   render();
 
-  const nextColName = colName(data[0].length);
-  const range = `'${currentSheet}'!${nextColName}1`;
-  try {
-    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ range, values: [[date]] })
-    });
-    document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
-    toast(`Added column "${date}" to Google Sheet`);
-  } catch (e) {
-    if (e.message.includes("exceeds grid limits") || e.message.includes("400")) {
-      await appendGridColumnsIfNeeded(20);
-      try {
-        await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ range, values: [[date]] })
-        });
-        document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
-        toast(`Added column "${date}" to Google Sheet`);
-        return;
-      } catch (err2) { alert(err2.message); return; }
-    }
-    alert(e.message);
-  }
+  await saveFullHabitsToGoogleSheet();
+  toast(`Added column "${colHeader}" to Google Sheet`);
 }
 
 async function addTime() {
   if (!accessToken) return googleLogin();
   markUserEditing();
-  const time = prompt("Enter Habit / Row Name:");
-  if (!time) return;
+  const time = prompt("Enter Habit / Time / Row Name:");
+  if (!time || !time.trim()) return;
+  const rowTitle = time.trim();
+
   const width = data.length > 0 ? data[0].length : 2;
-  const newRow = [time, ...Array(width - 1).fill("")];
+  const newRow = [rowTitle, ...Array(width - 1).fill("")];
+
+  if (!data.length) data.push(["HABIT"]);
   data.push(newRow);
+
+  const icon = rowTitle.match(/(\p{Extended_Pictographic})/u)?.[0] || "📋";
+  habits.push({ id: "h_" + Date.now(), title: rowTitle, icon, target: "Daily", entries: {} });
+
   render();
 
-  const range = `'${currentSheet}'!A:A`;
-  try {
-    await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ values: [newRow] })
-    });
-    document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
-    toast(`Added row "${time}" to Google Sheet`);
-  } catch (e) { alert(e.message); }
+  await saveFullHabitsToGoogleSheet();
+  toast(`Added row "${rowTitle}" to Google Sheet`);
 }
 
 async function deleteColumn(col1Based, colNameText = "") {
@@ -3412,11 +3416,17 @@ async function saveFullHabitsToGoogleSheet() {
   customDateCols.forEach(colInfo => headers.push(colInfo.label));
 
   const rows = [headers];
-  habits.forEach(h => {
+  habits.forEach((h, hIdx) => {
     const row = (startColIndex === 2) ? [h.title, h.target || "Daily"] : [h.title];
-    customDateCols.forEach(colInfo => {
-      const entry = h.entries[colInfo.key];
-      row.push(entry ? serializeHabitCell(entry.status, entry.note) : "");
+    customDateCols.forEach((colInfo, cIdx) => {
+      const entry = h.entries ? h.entries[colInfo.key] : null;
+      let val = "";
+      if (entry) {
+        val = serializeHabitCell(entry.status, entry.note);
+      } else if (data[hIdx + 1] && data[hIdx + 1][colInfo.colIndex]) {
+        val = data[hIdx + 1][colInfo.colIndex];
+      }
+      row.push(val);
     });
     rows.push(row);
   });
@@ -3468,32 +3478,51 @@ async function saveFullHabitsToGoogleSheet() {
 
 /* Parse Cell Values from Google Sheets or Raw Input */
 function parseHabitCell(raw) {
-  if (!raw) return { status: "PENDING", note: "" };
+  if (!raw) return { status: "PENDING", note: "", rawText: "" };
   let s = String(raw).trim();
   if (s.startsWith("{") && s.endsWith("}")) {
     try { return JSON.parse(s); } catch (e) {}
   }
-  let status = "PENDING", note = "";
+  let status = "PENDING", note = "", rawText = s;
   if (s.includes("|")) {
     let parts = s.split("|");
     let st = parts[0].trim().toUpperCase();
-    note = parts.slice(1).join("|").trim();
-    if (st === "DONE" || st === "✓" || st === "1" || st === "COMPLETED" || st === "TRUE" || st === "YES" || st === "🟢" || st === "OK") status = "DONE";
-    else if (st === "MISSED" || st === "✕" || st === "0" || st === "FALSE" || st === "NO" || st === "🔴" || st === "X") status = "MISSED";
-    else if (st === "SKIP" || st === "REST" || st === "⏸" || st === "PAUSE") status = "SKIP";
+    let nt = parts.slice(1).join("|").trim();
+    if (st === "DONE" || st === "✓" || st === "1" || st === "COMPLETED" || st === "TRUE" || st === "YES" || st === "🟢" || st === "OK") {
+      status = "DONE"; note = nt;
+    } else if (st === "MISSED" || st === "✕" || st === "0" || st === "FALSE" || st === "NO" || st === "🔴" || st === "X") {
+      status = "MISSED"; note = nt;
+    } else if (st === "SKIP" || st === "REST" || st === "⏸" || st === "PAUSE") {
+      status = "SKIP"; note = nt;
+    } else {
+      status = "ACTIVITY"; note = s;
+    }
   } else {
     let st = s.toUpperCase();
-    if (st === "DONE" || st === "✓" || st === "1" || st === "COMPLETED" || st === "TRUE" || st === "YES" || st === "🟢" || st === "OK" || st === "TICK") status = "DONE";
-    else if (st === "MISSED" || st === "✕" || st === "0" || st === "FALSE" || st === "NO" || st === "🔴" || st === "X") status = "MISSED";
-    else if (st === "SKIP" || st === "REST" || st === "⏸" || st === "PAUSE") status = "SKIP";
-    else { status = "DONE"; note = s; }
+    if (st === "DONE" || st === "✓" || st === "1" || st === "COMPLETED" || st === "TRUE" || st === "YES" || st === "🟢" || st === "OK" || st === "TICK") {
+      status = "DONE"; note = "";
+    } else if (st === "MISSED" || st === "✕" || st === "0" || st === "FALSE" || st === "NO" || st === "🔴" || st === "X") {
+      status = "MISSED"; note = "";
+    } else if (st === "SKIP" || st === "REST" || st === "⏸" || st === "PAUSE") {
+      status = "SKIP"; note = "";
+    } else if (st === "PENDING" || st === "⚪") {
+      status = "PENDING"; note = "";
+    } else {
+      status = "ACTIVITY"; note = s;
+    }
   }
-  return { status, note };
+  return { status, note, rawText: s };
 }
 
 function serializeHabitCell(status, note) {
   if (status === "PENDING" && !note) return "";
-  if (note) return `${status} | ${note}`;
+  if (status === "ACTIVITY") return note || "";
+  if (note) {
+    if (status === "DONE" && (note.includes(":") || note.length > 15)) {
+      return note;
+    }
+    return `${status} | ${note}`;
+  }
   return status;
 }
 
