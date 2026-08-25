@@ -635,7 +635,7 @@ tr.drag-over {
   background: var(--today-bg);
   box-shadow: inset 0 0 0 1px var(--today-border);
 }
-.cell-text { flex: 1; word-break: break-word; text-align: left; font-size: 13px; }
+.cell-text { flex: 1; word-break: break-word; text-align: left; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
 .cell-clear-icon {
   display: none;
   color: #ff9fa8;
@@ -828,10 +828,10 @@ tr.drag-over {
   transition: 0.2s;
 }
 .status-opt:hover { border-color: var(--cyan); }
-.status-opt.active[data-val="DONE"] { background: rgba(53, 211, 153, 0.25); border-color: var(--green); color: var(--green); }
-.status-opt.active[data-val="MISSED"] { background: rgba(255, 82, 99, 0.25); border-color: var(--red); color: var(--red); }
-.status-opt.active[data-val="SKIP"] { background: rgba(251, 191, 36, 0.25); border-color: var(--yellow); color: var(--yellow); }
-.status-opt.active[data-val="PENDING"] { background: rgba(255, 255, 255, 0.1); border-color: #fff; }
+.status-opt.active[data-val="DONE"], .status-opt.active[data-mval="DONE"] { background: rgba(53, 211, 153, 0.25); border-color: var(--green); color: var(--green); }
+.status-opt.active[data-val="MISSED"], .status-opt.active[data-mval="MISSED"] { background: rgba(255, 82, 99, 0.25); border-color: var(--red); color: var(--red); }
+.status-opt.active[data-val="SKIP"], .status-opt.active[data-mval="SKIP"] { background: rgba(251, 191, 36, 0.25); border-color: var(--yellow); color: var(--yellow); }
+.status-opt.active[data-val="PENDING"], .status-opt.active[data-mval="NONE"] { background: rgba(255, 255, 255, 0.1); border-color: #fff; }
 
 .modal-actions {
   display: flex;
@@ -1116,6 +1116,15 @@ tr.drag-over {
     <h2>Update Activity / Schedule</h2>
     <div class="field"><label>TIME / ROW</label><input id="mTime" class="input" readonly></div>
     <div class="field"><label>DATE / COL</label><input id="mDate" class="input" readonly></div>
+    <div class="field">
+      <label>STATUS TICK & COMPLETION</label>
+      <div class="status-picker" id="mStatusPicker">
+        <div class="status-opt active" data-mval="DONE" onclick="setActivityModalStatus('DONE')">🟢 Completed (✓)</div>
+        <div class="status-opt" data-mval="MISSED" onclick="setActivityModalStatus('MISSED')">🔴 Missed (✕)</div>
+        <div class="status-opt" data-mval="SKIP" onclick="setActivityModalStatus('SKIP')">⏸️ Skipped</div>
+        <div class="status-opt" data-mval="NONE" onclick="setActivityModalStatus('NONE')">⚪ Text Only</div>
+      </div>
+    </div>
     <div class="field"><label>ACTIVITY DETAILS</label><textarea id="mValue" class="input" placeholder="Enter schedule activity details..."></textarea></div>
     <div class="modal-actions">
       <div class="modal-btn-group">
@@ -1243,6 +1252,7 @@ let draggedHabitIdx = null;
 let isUserEditing = false;
 let userEditTimer = null;
 let deferredPrompt = null;
+let activityModalStatus = "DONE";
 
 let currentYear = 2026;
 let currentMonth = 7; // 0-indexed: 7 = August
@@ -2824,10 +2834,35 @@ function renderActivityWorkspace() {
         const div = document.createElement("div");
         div.className = "cell";
         const v = row[c] || "";
+        const parsed = parseHabitCell(v);
 
         const textSpan = document.createElement("span");
         textSpan.className = "cell-text";
-        textSpan.innerHTML = v ? escapeHtml(v) : '<span class="empty">Click to update</span>';
+
+        if (!v || !v.trim()) {
+          textSpan.innerHTML = '<span class="empty">Click to add activity...</span>';
+        } else {
+          let badgeHtml = "";
+          if (parsed.status === "DONE") {
+            badgeHtml = `<span class="badge-done" style="margin-right:6px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:900;">🟢 ✓</span>`;
+          } else if (parsed.status === "MISSED") {
+            badgeHtml = `<span class="badge-missed" style="margin-right:6px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:900;">🔴 ✕</span>`;
+          } else if (parsed.status === "SKIP") {
+            badgeHtml = `<span style="background:rgba(251,191,36,0.2);color:var(--yellow);border:1px solid rgba(251,191,36,0.4);margin-right:6px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:900;">⏸️</span>`;
+          }
+
+          let contentText = "";
+          if (parsed.note) {
+            contentText = escapeHtml(parsed.note);
+          } else if (parsed.status !== "PENDING" && parsed.status !== "ACTIVITY") {
+            contentText = escapeHtml(parsed.status);
+          } else {
+            contentText = escapeHtml(v);
+          }
+
+          textSpan.innerHTML = `${badgeHtml}<span>${contentText}</span>`;
+        }
+
         div.appendChild(textSpan);
 
         if (v && v.trim()) {
@@ -2889,11 +2924,44 @@ function renderActivityToolbar() {
 }
 
 /* ================= ACTIVITY CELL MODALS & EDITING ================= */
-function openEditor(row, col, time, date, value) {
+function setActivityModalStatus(st) {
+  activityModalStatus = st;
+  document.querySelectorAll("#mStatusPicker .status-opt").forEach(opt => {
+    if (opt.dataset.mval === st) opt.classList.add("active");
+    else opt.classList.remove("active");
+  });
+}
+
+function openEditor(row, col, time, date, rawValue) {
   selected = { row, col };
   document.getElementById("mTime").value = time;
   document.getElementById("mDate").value = date;
-  document.getElementById("mValue").value = value;
+
+  const parsed = parseHabitCell(rawValue);
+  let statusToSet = "DONE";
+  let detailText = rawValue || "";
+
+  if (parsed.status === "DONE") {
+    statusToSet = "DONE";
+    detailText = parsed.note || "";
+  } else if (parsed.status === "MISSED") {
+    statusToSet = "MISSED";
+    detailText = parsed.note || "";
+  } else if (parsed.status === "SKIP") {
+    statusToSet = "SKIP";
+    detailText = parsed.note || "";
+  } else if (parsed.status === "PENDING" && !parsed.note) {
+    statusToSet = "DONE";
+    detailText = "";
+  } else {
+    statusToSet = "NONE";
+    detailText = rawValue || "";
+  }
+
+  setActivityModalStatus(statusToSet);
+  document.getElementById("mValue").value = detailText;
+  document.getElementById("mClearCellBtn").style.display = deleteMode ? "inline-flex" : "none";
+  document.getElementById("mDeleteRowBtn").style.display = deleteMode ? "inline-flex" : "none";
   document.getElementById("modalBg").style.display = "flex";
   document.getElementById("mValue").focus();
 }
@@ -2907,10 +2975,19 @@ async function saveCell() {
   if (!selected) return;
   if (!accessToken) return googleLogin();
   markUserEditing();
-  const value = document.getElementById("mValue").value.trim();
+  const detailText = document.getElementById("mValue").value.trim();
+
+  let finalValue = "";
+  if (activityModalStatus === "NONE") {
+    finalValue = detailText;
+  } else if (detailText) {
+    finalValue = `${activityModalStatus} | ${detailText}`;
+  } else {
+    finalValue = activityModalStatus;
+  }
 
   // 1. Update local data matrix
-  data[selected.row - 1][selected.col - 1] = value;
+  data[selected.row - 1][selected.col - 1] = finalValue;
 
   // 2. Synchronize habits array entries
   const rIdx = selected.row - 2;
@@ -2920,24 +2997,24 @@ async function saveCell() {
   if (rIdx >= 0 && rIdx < habits.length) {
     if (!habits[rIdx].entries) habits[rIdx].entries = {};
     if (colKey) {
-      habits[rIdx].entries[colKey] = value ? { status: "ACTIVITY", note: value, rawText: value } : { status: "PENDING", note: "" };
+      habits[rIdx].entries[colKey] = parseHabitCell(finalValue);
     }
   }
 
   closeModal();
   render();
 
-  // 3. Save cell to Google Sheet and save full sheet matrix
+  // 3. Save cell to Google Sheet
   const cell = colName(selected.col) + selected.row;
   const range = `'${currentSheet}'!${cell}`;
   try {
     await api(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ range, majorDimension: "ROWS", values: [[value]] })
+      body: JSON.stringify({ range, majorDimension: "ROWS", values: [[finalValue]] })
     });
     document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
-    toast("Synced activity to Google Sheet");
+    toast("Saved Activity & Status to Google Sheet");
   } catch (e) { alert(e.message); }
 }
 
@@ -3315,7 +3392,7 @@ function closeNoteModal() {
 }
 
 function setNoteStatusUI(status) {
-  document.querySelectorAll(".status-opt").forEach(opt => {
+  document.querySelectorAll("#noteModalBg .status-opt").forEach(opt => {
     if (opt.dataset.val === status) opt.classList.add("active");
     else opt.classList.remove("active");
   });
@@ -3324,7 +3401,7 @@ function setNoteStatusUI(status) {
 function setNoteStatus(status) { setNoteStatusUI(status); }
 
 function getSelectedNoteStatus() {
-  const active = document.querySelector(".status-opt.active");
+  const active = document.querySelector("#noteModalBg .status-opt.active");
   return active ? active.dataset.val : "PENDING";
 }
 
@@ -3518,9 +3595,6 @@ function serializeHabitCell(status, note) {
   if (status === "PENDING" && !note) return "";
   if (status === "ACTIVITY") return note || "";
   if (note) {
-    if (status === "DONE" && (note.includes(":") || note.length > 15)) {
-      return note;
-    }
     return `${status} | ${note}`;
   }
   return status;
