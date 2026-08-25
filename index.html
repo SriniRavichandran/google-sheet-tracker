@@ -1146,8 +1146,9 @@ let isUserEditing = false;
 let userEditTimer = null;
 let deferredPrompt = null;
 
-let currentYear = 2026;
-let currentMonth = 7; // 0-indexed: 7 = August
+const _initDate = new Date();
+let currentYear = _initDate.getFullYear();
+let currentMonth = _initDate.getMonth(); // Real today 0-indexed month
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -1618,11 +1619,17 @@ async function loadSheet() {
         }
       }
 
-      if (customDateCols.length > 0 && customDateCols[0].monthIndex !== undefined) {
-        currentMonth = customDateCols[0].monthIndex;
-        document.getElementById("monthSelect").value = currentMonth;
-        document.getElementById("yearSelect").value = currentYear;
+      const realToday = new Date();
+      const realTodayMonthIdx = realToday.getMonth();
+      const hasTodayMonth = customDateCols.some(c => c.monthIndex === realTodayMonthIdx);
+
+      if (hasTodayMonth) {
+        currentMonth = realTodayMonthIdx;
+      } else if (customDateCols.length > 0 && customDateCols[customDateCols.length - 1].monthIndex !== undefined) {
+        currentMonth = customDateCols[customDateCols.length - 1].monthIndex;
       }
+      document.getElementById("monthSelect").value = currentMonth;
+      document.getElementById("yearSelect").value = currentYear;
 
       for (let r = 1; r < rawValues.length; r++) {
         const row = rawValues[r];
@@ -1739,17 +1746,35 @@ function scrollTableCols(colsToScroll) {
   tableWrap.scrollBy({ left: colsToScroll * colWidth, behavior: 'smooth' });
 }
 
-/* Auto Scroll to Today's or Selected Month Date Column (Smooth Vertical & Column Alignment) */
+/* Auto Scroll to Today's or Selected Month Date Column (Positioned FIRST on left next to Habit column) */
 function scrollToActiveDateColumn(forceMonthMatch = false) {
-  setTimeout(() => {
+  const doScroll = () => {
     const tableWrap = document.querySelector('.table-wrap');
     if (!tableWrap) return;
 
-    const monthShort = MONTH_SHORT[currentMonth].toLowerCase();
     const allDateThs = tableWrap.querySelectorAll('th.th-date');
+    if (allDateThs.length === 0) return;
+
     let targetTh = null;
 
-    if (forceMonthMatch) {
+    // 1. Priority: Today's column (.today)
+    targetTh = tableWrap.querySelector('th.th-date.today');
+
+    // 2. Priority: Today's day number match
+    if (!targetTh) {
+      const realToday = new Date();
+      const dayNumStr = realToday.getDate() < 10 ? `0${realToday.getDate()}` : `${realToday.getDate()}`;
+      for (let th of allDateThs) {
+        if (th.textContent.includes(dayNumStr)) {
+          targetTh = th;
+          break;
+        }
+      }
+    }
+
+    // 3. Priority: First column matching current month
+    if (!targetTh) {
+      const monthShort = MONTH_SHORT[currentMonth].toLowerCase();
       for (let th of allDateThs) {
         if (th.textContent.toLowerCase().includes(monthShort)) {
           targetTh = th;
@@ -1758,21 +1783,14 @@ function scrollToActiveDateColumn(forceMonthMatch = false) {
       }
     }
 
-    if (!targetTh) {
-      targetTh = tableWrap.querySelector('th.th-date.today');
-    }
-
-    if (!targetTh) {
-      for (let th of allDateThs) {
-        if (th.textContent.toLowerCase().includes(monthShort)) {
-          targetTh = th;
-          break;
-        }
-      }
+    // 4. Fallback: First available date column
+    if (!targetTh && allDateThs.length > 0) {
+      targetTh = allDateThs[0];
     }
 
     if (targetTh) {
       const firstColWidth = tableWrap.querySelector('th:first-child')?.clientWidth || 280;
+      // Scroll targetTh so its left border aligns EXACTLY next to the sticky first column
       const scrollLeftPos = Math.max(0, targetTh.offsetLeft - firstColWidth);
       tableWrap.scrollTo({ left: scrollLeftPos, behavior: 'smooth' });
 
@@ -1781,7 +1799,10 @@ function scrollToActiveDateColumn(forceMonthMatch = false) {
         panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }
-  }, 150);
+  };
+
+  setTimeout(doScroll, 50);
+  setTimeout(doScroll, 250);
 }
 
 /* Filter custom date columns based on selected month dropdown */
