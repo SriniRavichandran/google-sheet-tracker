@@ -788,6 +788,11 @@ tr.drag-over {
   color: var(--text);
 }
 
+/* Install App Button - Strictly Hidden on Desktop mode, shown ONLY in Mobile view time */
+#installAppBtn {
+  display: none !important;
+}
+
 /* Responsive Styles for Desktop, Tablet & Mobile */
 @media (max-width: 1024px) {
   .hero { grid-template-columns: 1fr; }
@@ -796,6 +801,9 @@ tr.drag-over {
 }
 
 @media (max-width: 768px) {
+  #installAppBtn.pwa-ready {
+    display: inline-flex !important;
+  }
   .top {
     min-height: auto;
     padding: 14px 16px;
@@ -1321,13 +1329,25 @@ function initTheme() {
   changeTheme(savedTheme);
 }
 
-/* PWA App Installation Handler */
+/* PWA App Installation Handler - Mobile View Only */
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  const btn = document.getElementById("installAppBtn");
-  if (btn) btn.style.display = "inline-flex";
+  checkMobilePWA();
 });
+
+window.addEventListener('resize', checkMobilePWA);
+
+function checkMobilePWA() {
+  const btn = document.getElementById("installAppBtn");
+  if (!btn) return;
+  const isMobileView = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (deferredPrompt && isMobileView) {
+    btn.classList.add("pwa-ready");
+  } else {
+    btn.classList.remove("pwa-ready");
+  }
+}
 
 function installPWAApp() {
   if (deferredPrompt) {
@@ -1337,10 +1357,10 @@ function installPWAApp() {
         toast("RS-25G App Installed Successfully! 🎉");
       }
       deferredPrompt = null;
-      document.getElementById("installAppBtn").style.display = "none";
+      checkMobilePWA();
     });
   } else {
-    alert("To install RS-25G on Mobile or Desktop:\n\n1. Chrome/Edge (Desktop/Android): Click 'Install' icon (📥) in address bar.\n2. Safari (iOS/iPhone): Tap 'Share' button ➔ Select 'Add to Home Screen'.");
+    alert("To install RS-25G on Mobile:\n\n1. Android (Chrome/Edge): Tap 'Add to Home Screen' or Install App.\n2. iPhone/iPad (Safari): Tap 'Share' button ➔ Select 'Add to Home Screen'.");
   }
 }
 
