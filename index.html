@@ -491,6 +491,7 @@ body::after { background: var(--cyan); right: -200px; top: -200px; animation-del
   max-height: 65vh;
   scroll-behavior: smooth;
   scroll-snap-type: x proximity;
+  scroll-padding-left: 280px;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -557,10 +558,14 @@ th.th-date {
 .th-date-num { font-size: 13px; font-weight: 900; color: #fff; white-space: nowrap; }
 .th-date-day { font-size: 9px; color: var(--muted); text-transform: uppercase; }
 th.th-date.today {
-  background: var(--today-bg);
-  box-shadow: inset 0 0 0 1px var(--today-border);
+  background: var(--today-bg) !important;
+  box-shadow: inset 0 0 0 1.5px var(--today-border) !important;
 }
-th.th-date.today .th-date-num { color: var(--cyan); text-shadow: 0 0 10px var(--accent-glow); }
+th.th-date.today .th-date-num { color: var(--cyan) !important; text-shadow: 0 0 10px var(--accent-glow) !important; }
+td.today-col {
+  background: var(--today-bg) !important;
+  box-shadow: inset 1px 0 0 var(--today-border), inset -1px 0 0 var(--today-border) !important;
+}
 
 /* Drag and Drop Row Styling */
 tr.draggable-row {
@@ -1031,6 +1036,7 @@ tr.drag-over {
         <span id="panelHeadHint">Drag handle (≡) to reorder • Click cell to tick: 🟢 Done (✓) ➜ 🔴 Missed (✕) ➜ ⏸️ Skipped ➜ ⚪ Blank</span>
         <div style="display:inline-flex;gap:6px;margin-left:auto;">
           <button class="btn" style="padding:4px 10px;font-size:12px;font-weight:800;" onclick="scrollTableCols(-3)" title="Scroll Left 3 Columns">◀ Prev Cols</button>
+          <button class="btn primary" style="padding:4px 10px;font-size:12px;font-weight:800;" onclick="jumpToToday()" title="Jump to Today's Column">📍 Today</button>
           <button class="btn" style="padding:4px 10px;font-size:12px;font-weight:800;" onclick="scrollTableCols(3)" title="Scroll Right 3 Columns">Next Cols ▶</button>
         </div>
       </div>
@@ -1141,6 +1147,7 @@ let availableSheets = []; // 100% loaded dynamically from Google Sheets API
 let sheetMap = {};
 
 let currentFrequency = "daily"; // 'daily', 'weekly', 'monthly', 'yearly'
+let userHasSelectedMonth = false; // Tracks if user manually changed month dropdown
 let deleteMode = false; // Toggle Delete Mode (OFF by default: Deletion buttons DISABLED until toggled ON)
 let data = []; // Raw matrix from Google Sheets (100% dynamic)
 let habits = []; // Habit definitions & entries (100% dynamic)
@@ -1449,31 +1456,101 @@ function getDaysInCurrentMonth() {
 }
 
 /* Parse custom date headers dynamically from Google Sheet Row 0 */
-function parseCustomDateHeader(headerText) {
-  if (!headerText) return { label: "Date", dayName: "", isToday: false, monthIndex: currentMonth, dayNum: 1 };
+function parseCustomDateHeader(headerText, forcedMonth = null, forcedYear = null) {
+  const realToday = new Date();
+  const defYear = forcedYear !== null ? forcedYear : currentYear;
+  const defMonth = forcedMonth !== null ? forcedMonth : currentMonth;
+
+  if (!headerText) {
+    return { label: "Date", dayNum: 1, dayName: "", isToday: false, monthIndex: defMonth, year: defYear };
+  }
+
   const str = String(headerText).trim();
+  const lowerStr = str.toLowerCase();
   const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  let detectedMonth = currentMonth;
-  MONTH_SHORT.forEach((mStr, idx) => {
-    if (str.toLowerCase().includes(mStr.toLowerCase())) detectedMonth = idx;
-  });
+  let detectedMonth = null;
+  let detectedDay = null;
+  let detectedYear = defYear;
 
-  const numMatch = str.match(/\d+/);
-  const dayNum = numMatch ? parseInt(numMatch[0], 10) : 1;
+  // 1. Check English Month Names (full and short)
+  const fullMonths = [
+    "january", "february", "march", "april", "may", "june",
+    "july", "august", "september", "october", "november", "december"
+  ];
+  const shortMonths = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 
-  const dateObj = new Date(currentYear, detectedMonth, dayNum);
+  for (let m = 0; m < 12; m++) {
+    if (lowerStr.includes(fullMonths[m]) || lowerStr.includes(shortMonths[m])) {
+      detectedMonth = m;
+      break;
+    }
+  }
+
+  // 2. Check YYYY-MM-DD or YYYY/MM/DD
+  const isoMatch = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (isoMatch) {
+    detectedYear = parseInt(isoMatch[1], 10);
+    detectedMonth = parseInt(isoMatch[2], 10) - 1;
+    detectedDay = parseInt(isoMatch[3], 10);
+  }
+
+  // 3. Check DD-MM-YYYY or DD/MM/YYYY or DD-MM-YY or DD/MM/YY
+  if (detectedDay === null) {
+    const dmyMatch = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/);
+    if (dmyMatch) {
+      detectedDay = parseInt(dmyMatch[1], 10);
+      const mVal = parseInt(dmyMatch[2], 10) - 1;
+      if (mVal >= 0 && mVal < 12) detectedMonth = mVal;
+      let yVal = parseInt(dmyMatch[3], 10);
+      if (yVal < 100) yVal += 2000;
+      detectedYear = yVal;
+    }
+  }
+
+  // 4. Check DD-MM or DD/MM (numeric date without year, e.g. 01-09 or 1/9)
+  if (detectedDay === null && detectedMonth === null) {
+    const dmMatch = str.match(/^(\d{1,2})[-/](\d{1,2})$/);
+    if (dmMatch) {
+      detectedDay = parseInt(dmMatch[1], 10);
+      const mVal = parseInt(dmMatch[2], 10) - 1;
+      if (mVal >= 0 && mVal < 12) detectedMonth = mVal;
+    }
+  }
+
+  // 5. Extract day number & 4-digit year from remaining patterns (e.g. 1-Sep, Sep 1, 01-SEP-2026)
+  if (detectedDay === null) {
+    const yrMatch = str.match(/\b(20\d{2})\b/);
+    if (yrMatch) {
+      detectedYear = parseInt(yrMatch[1], 10);
+    }
+
+    const numMatch = str.match(/\d+/);
+    if (numMatch) {
+      detectedDay = parseInt(numMatch[0], 10);
+    }
+  }
+
+  // Fallbacks
+  if (detectedMonth === null) detectedMonth = defMonth;
+  if (detectedDay === null || isNaN(detectedDay)) detectedDay = 1;
+
+  const dateObj = new Date(detectedYear, detectedMonth, detectedDay);
   const dayName = !isNaN(dateObj.getTime()) ? weekdays[dateObj.getDay()] : "";
 
-  const today = new Date();
-  const isToday = (today.getFullYear() === currentYear && today.getMonth() === detectedMonth && today.getDate() === dayNum);
+  const isToday = (
+    realToday.getFullYear() === detectedYear &&
+    realToday.getMonth() === detectedMonth &&
+    realToday.getDate() === detectedDay
+  );
 
   return {
     label: str,
-    dayNum,
+    dayNum: detectedDay,
     dayName,
     isToday,
     monthIndex: detectedMonth,
+    year: detectedYear,
     dateObj
   };
 }
@@ -1627,6 +1704,10 @@ async function loadSheet() {
       const headerRow = rawValues[0] || [];
       startColIndex = detectStartColIndex(headerRow);
 
+      const realToday = new Date();
+      const realTodayMonthIdx = realToday.getMonth();
+      const realTodayYear = realToday.getFullYear();
+
       for (let c = startColIndex; c < headerRow.length; c++) {
         if (headerRow[c] && String(headerRow[c]).trim()) {
           const label = String(headerRow[c]).trim();
@@ -1634,22 +1715,37 @@ async function loadSheet() {
             colIndex: c,
             colLetter: colName(c + 1),
             key: label,
-            ...parseCustomDateHeader(label)
+            ...parseCustomDateHeader(label, realTodayMonthIdx, realTodayYear)
           });
         }
       }
 
-      const realToday = new Date();
-      const realTodayMonthIdx = realToday.getMonth();
-      const hasTodayMonth = customDateCols.some(c => c.monthIndex === realTodayMonthIdx);
+      if (!userHasSelectedMonth) {
+        const hasTodayMonth = customDateCols.some(c => c.monthIndex === realTodayMonthIdx);
 
-      if (hasTodayMonth) {
-        currentMonth = realTodayMonthIdx;
-      } else if (customDateCols.length > 0 && customDateCols[customDateCols.length - 1].monthIndex !== undefined) {
-        currentMonth = customDateCols[customDateCols.length - 1].monthIndex;
+        if (hasTodayMonth) {
+          currentMonth = realTodayMonthIdx;
+          currentYear = realTodayYear;
+        } else if (customDateCols.length > 0) {
+          const lastCol = customDateCols[customDateCols.length - 1];
+          if (lastCol.monthIndex !== undefined) currentMonth = lastCol.monthIndex;
+          if (lastCol.year !== undefined) currentYear = lastCol.year;
+        }
       }
-      document.getElementById("monthSelect").value = currentMonth;
-      document.getElementById("yearSelect").value = currentYear;
+
+      // Re-evaluate isToday flag based on updated currentMonth / currentYear
+      customDateCols.forEach(col => {
+        col.isToday = (
+          realToday.getFullYear() === (col.year || currentYear) &&
+          realToday.getMonth() === col.monthIndex &&
+          realToday.getDate() === col.dayNum
+        );
+      });
+
+      const mSelect = document.getElementById("monthSelect");
+      const ySelect = document.getElementById("yearSelect");
+      if (mSelect) mSelect.value = currentMonth;
+      if (ySelect) ySelect.value = currentYear;
 
       for (let r = 1; r < rawValues.length; r++) {
         const row = rawValues[r];
@@ -1682,6 +1778,23 @@ async function loadSheet() {
   }
 }
 
+/* Reset Month Selection to Today's Month & Scroll to Today */
+function jumpToToday() {
+  userHasSelectedMonth = false;
+  const realToday = new Date();
+  currentMonth = realToday.getMonth();
+  currentYear = realToday.getFullYear();
+
+  const mSelect = document.getElementById("monthSelect");
+  const ySelect = document.getElementById("yearSelect");
+  if (mSelect) mSelect.value = currentMonth;
+  if (ySelect) ySelect.value = currentYear;
+
+  buildDefaultCustomDateCols();
+  render();
+  scrollToActiveDateColumn(true);
+}
+
 function buildDefaultCustomDateCols() {
   customDateCols = [];
   if (!data || data.length === 0 || !data[0]) return;
@@ -1694,7 +1807,7 @@ function buildDefaultCustomDateCols() {
         colIndex: c,
         colLetter: colName(c + 1),
         key: label,
-        ...parseCustomDateHeader(label)
+        ...parseCustomDateHeader(label, currentMonth, currentYear)
       });
     }
   }
@@ -1736,6 +1849,7 @@ function renderTabs() {
 
 function switchSheetTab(name) {
   currentSheet = name;
+  userHasSelectedMonth = false;
   renderTabs();
   if (accessToken) {
     loadSheet();
@@ -1780,12 +1894,15 @@ function scrollToActiveDateColumn(forceMonthMatch = false) {
     // 1. Priority: Today's column (.today)
     targetTh = tableWrap.querySelector('th.th-date.today');
 
-    // 2. Priority: Today's day number match
+    // 2. Priority: Today's day number match on active month headers
     if (!targetTh) {
       const realToday = new Date();
-      const dayNumStr = realToday.getDate() < 10 ? `0${realToday.getDate()}` : `${realToday.getDate()}`;
+      const dayNum = realToday.getDate();
       for (let th of allDateThs) {
-        if (th.textContent.includes(dayNumStr)) {
+        const dateNumDiv = th.querySelector('.th-date-num');
+        const text = dateNumDiv ? dateNumDiv.textContent.trim() : th.textContent.trim();
+        const numMatch = text.match(/\b\d+\b/);
+        if (numMatch && parseInt(numMatch[0], 10) === dayNum) {
           targetTh = th;
           break;
         }
@@ -1795,8 +1912,10 @@ function scrollToActiveDateColumn(forceMonthMatch = false) {
     // 3. Priority: First column matching current month
     if (!targetTh) {
       const monthShort = MONTH_SHORT[currentMonth].toLowerCase();
+      const monthFull = MONTH_NAMES[currentMonth].toLowerCase();
       for (let th of allDateThs) {
-        if (th.textContent.toLowerCase().includes(monthShort)) {
+        const text = th.textContent.toLowerCase();
+        if (text.includes(monthShort) || text.includes(monthFull)) {
           targetTh = th;
           break;
         }
@@ -1809,20 +1928,28 @@ function scrollToActiveDateColumn(forceMonthMatch = false) {
     }
 
     if (targetTh) {
-      const firstColWidth = tableWrap.querySelector('th:first-child')?.clientWidth || 280;
-      // Scroll targetTh so its left border aligns EXACTLY next to the sticky first column
+      const firstCol = tableWrap.querySelector('th:first-child');
+      const firstColWidth = firstCol ? firstCol.offsetWidth : 280;
+      
+      // Calculate position so targetTh left edge aligns right after sticky first column
       const scrollLeftPos = Math.max(0, targetTh.offsetLeft - firstColWidth);
       tableWrap.scrollTo({ left: scrollLeftPos, behavior: 'smooth' });
 
-      const panel = document.querySelector('.panel');
-      if (panel && forceMonthMatch) {
-        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (forceMonthMatch) {
+        const panel = document.querySelector('.panel');
+        if (panel) {
+          panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       }
     }
   };
 
-  setTimeout(doScroll, 50);
-  setTimeout(doScroll, 250);
+  requestAnimationFrame(() => {
+    doScroll();
+    setTimeout(doScroll, 50);
+    setTimeout(doScroll, 200);
+    setTimeout(doScroll, 500);
+  });
 }
 
 /* Filter custom date columns based on selected month dropdown */
@@ -2184,6 +2311,7 @@ function renderHabitGrid() {
 
     displayCols.forEach((colInfo) => {
       const td = document.createElement("td");
+      if (colInfo.isToday) td.className = "today-col";
 
       if (currentFrequency === "daily") {
         const rawCol = colInfo.rawCols[0];
@@ -3161,13 +3289,16 @@ function initYearMonthPickers() {
 }
 
 async function onMonthYearChange() {
+  userHasSelectedMonth = true;
   const moVal = parseInt(document.getElementById("monthSelect").value, 10);
   const yrVal = parseInt(document.getElementById("yearSelect").value, 10);
   currentMonth = moVal;
   currentYear = yrVal;
 
+  buildDefaultCustomDateCols();
+
   const monthShortStr = MONTH_SHORT[currentMonth].toLowerCase();
-  const hasMonthCols = customDateCols.some(col => col.label.toLowerCase().includes(monthShortStr));
+  const hasMonthCols = customDateCols.some(col => col.monthIndex === currentMonth || col.label.toLowerCase().includes(monthShortStr));
 
   if (!hasMonthCols && accessToken) {
     toast(`Creating date columns for ${MONTH_NAMES[currentMonth]} ${currentYear}...`);
