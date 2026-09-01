@@ -1817,6 +1817,9 @@ async function loadSheet() {
       if (mSelect) mSelect.value = currentMonth;
       if (ySelect) ySelect.value = currentYear;
 
+      // Guarantee full month columns (1 to 28/29/30/31) are auto-populated
+      buildDefaultCustomDateCols();
+
       for (let r = 1; r < rawValues.length; r++) {
         const row = rawValues[r];
         if (!row || !row[0] || !String(row[0]).trim()) continue;
