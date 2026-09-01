@@ -1880,6 +1880,34 @@ function buildDefaultCustomDateCols() {
       });
     }
   }
+
+  // Auto-fill full month columns if any days of currentMonth are missing
+  const monthCols = customDateCols.filter(col => col.monthIndex === currentMonth);
+  const existingDayNums = new Set(monthCols.map(col => col.dayNum));
+  const daysInMonth = getDaysInCurrentMonth();
+
+  if (existingDayNums.size < daysInMonth) {
+    const monthShortUpper = MONTH_SHORT[currentMonth].toUpperCase();
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (!existingDayNums.has(d)) {
+        const dayStr = d < 10 ? `0${d}` : `${d}`;
+        const label = `${dayStr}-${monthShortUpper}`;
+        const colIdx = data[0] ? data[0].length : startColIndex + customDateCols.length;
+        if (data[0] && !data[0].includes(label)) {
+          data[0].push(label);
+          for (let r = 1; r < data.length; r++) {
+            if (data[r]) data[r].push("");
+          }
+        }
+        customDateCols.push({
+          colIndex: colIdx,
+          colLetter: colName(colIdx + 1),
+          key: label,
+          ...parseCustomDateHeader(label, currentMonth, currentYear)
+        });
+      }
+    }
+  }
 }
 
 async function refreshAll() {
@@ -3411,11 +3439,11 @@ async function onMonthYearChange() {
 
   buildDefaultCustomDateCols();
 
-  const monthShortStr = MONTH_SHORT[currentMonth].toLowerCase();
-  const hasMonthCols = customDateCols.some(col => col.monthIndex === currentMonth || col.label.toLowerCase().includes(monthShortStr));
+  const monthCols = customDateCols.filter(col => col.monthIndex === currentMonth);
+  const daysInMonth = getDaysInCurrentMonth();
 
-  if (!hasMonthCols && accessToken) {
-    toast(`Creating date columns for ${MONTH_NAMES[currentMonth]} ${currentYear}...`);
+  if (monthCols.length < daysInMonth && accessToken) {
+    toast(`Populating full month columns (${daysInMonth} days) for ${MONTH_NAMES[currentMonth]} ${currentYear}...`);
     await populateDatesForMonth(currentYear, currentMonth);
   } else {
     render(true);
