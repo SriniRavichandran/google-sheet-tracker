@@ -1769,7 +1769,7 @@ async function loadSheet() {
       data = [["HABIT"]];
     }
 
-    render();
+    render(!userHasSelectedMonth);
     setSync("Synced", "online");
     document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
   } catch (e) {
@@ -1791,8 +1791,7 @@ function jumpToToday() {
   if (ySelect) ySelect.value = currentYear;
 
   buildDefaultCustomDateCols();
-  render();
-  scrollToActiveDateColumn(true);
+  render(true);
 }
 
 function buildDefaultCustomDateCols() {
@@ -1858,8 +1857,16 @@ function switchSheetTab(name) {
   }
 }
 
+/* Helper to get element's horizontal offset relative to container */
+function getRelativeOffsetLeft(elem, container) {
+  if (!elem || !container) return 0;
+  const elemRect = elem.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+  return elemRect.left - containerRect.left + container.scrollLeft;
+}
+
 /* ================= MAIN RENDER ROUTER ================= */
-function render() {
+function render(autoScroll = false) {
   const monthPicker = document.getElementById("monthSelect");
   const yearPicker = document.getElementById("yearSelect");
   const freqPicker = document.getElementById("freqSelect");
@@ -1869,7 +1876,7 @@ function render() {
   yearPicker.style.display = "inline-block";
   freqPicker.style.display = "inline-block";
   analyticsSec.style.display = "grid";
-  renderHabitWorkspace();
+  renderHabitWorkspace(autoScroll);
 }
 
 /* Column-Wise Horizontal Scroll Helper */
@@ -1928,11 +1935,12 @@ function scrollToActiveDateColumn(forceMonthMatch = false) {
     }
 
     if (targetTh) {
-      const firstCol = tableWrap.querySelector('th:first-child');
-      const firstColWidth = firstCol ? firstCol.offsetWidth : 280;
-      
+      const stickyCol = tableWrap.querySelector('td:first-child, th:first-child');
+      const stickyWidth = stickyCol ? stickyCol.getBoundingClientRect().width : 280;
+      const targetOffsetLeft = getRelativeOffsetLeft(targetTh, tableWrap);
+
       // Calculate position so targetTh left edge aligns right after sticky first column
-      const scrollLeftPos = Math.max(0, targetTh.offsetLeft - firstColWidth);
+      const scrollLeftPos = Math.max(0, targetOffsetLeft - stickyWidth);
       tableWrap.scrollTo({ left: scrollLeftPos, behavior: 'smooth' });
 
       if (forceMonthMatch) {
@@ -2037,7 +2045,7 @@ function getDisplayColumns() {
 }
 
 /* ================= HABIT WORKSPACE RENDERER ================= */
-function renderHabitWorkspace() {
+function renderHabitWorkspace(autoScroll = false) {
   document.getElementById("heroTitle").textContent = `RS-25G - ${currentSheet}`;
   document.getElementById("heroTabType").textContent = `🔥 RS-25G RELENTLESS GROWTH • ${currentFrequency.toUpperCase()} VIEW`;
   document.getElementById("heroDesc").textContent = "Track daily checkmarks, drag & drop to reorder habits, configure target frequencies (Daily, 1x/Week, 1x/Month, 4x/Year), and analyze weekly progress. 100% online synced with Google Sheets.";
@@ -2150,8 +2158,10 @@ function renderHabitWorkspace() {
   renderWeeklyBreakdown();
   renderHabitStatusList();
   renderHabitToolbar();
-  renderHabitGrid();
-  scrollToActiveDateColumn();
+  renderHabitGrid(!autoScroll);
+  if (autoScroll) {
+    scrollToActiveDateColumn();
+  }
 }
 
 function renderHabitToolbar() {
@@ -2191,7 +2201,10 @@ function renderHabitToolbar() {
   });
 }
 
-function renderHabitGrid() {
+function renderHabitGrid(preserveScroll = true) {
+  const tableWrap = document.querySelector('.table-wrap');
+  const savedScrollLeft = (preserveScroll && tableWrap) ? tableWrap.scrollLeft : null;
+
   const table = document.getElementById("grid");
   table.innerHTML = "";
   document.getElementById("panelHeadTitle").textContent = `${currentSheet} (${MONTH_NAMES[currentMonth]} ${currentYear} • ${currentFrequency.toUpperCase()} MODE)`;
@@ -2410,6 +2423,12 @@ function renderHabitGrid() {
 
   tbody.appendChild(trFoot);
   table.appendChild(tbody);
+
+  if (savedScrollLeft !== null && tableWrap) {
+    requestAnimationFrame(() => {
+      tableWrap.scrollLeft = savedScrollLeft;
+    });
+  }
 }
 
 /* Drag and Drop Handlers for Reordering Habit Rows */
@@ -3304,10 +3323,8 @@ async function onMonthYearChange() {
     toast(`Creating date columns for ${MONTH_NAMES[currentMonth]} ${currentYear}...`);
     await populateDatesForMonth(currentYear, currentMonth);
   } else {
-    render();
+    render(true);
   }
-
-  scrollToActiveDateColumn(true);
 }
 
 function toggleAnalyticsView() {
