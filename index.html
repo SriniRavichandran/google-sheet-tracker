@@ -531,11 +531,13 @@ th:first-child, td:first-child {
   position: sticky;
   left: 0;
   z-index: 16;
+  width: 280px;
   min-width: 280px;
-  max-width: 360px;
+  max-width: 280px;
   background: var(--panel);
   text-align: left;
-  padding: 12px 16px;
+  padding: 10px 12px;
+  box-sizing: border-box;
 }
 th:first-child { z-index: 20; background: var(--panel2); }
 
@@ -588,8 +590,8 @@ tr.drag-over {
 .drag-handle:hover { color: var(--cyan); transform: scale(1.2); }
 
 /* Interactive Habit Cell with Ticks */
-.habit-col-cell { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.habit-col-main { display: flex; align-items: center; gap: 8px; overflow: hidden; flex: 1; }
+.habit-col-cell { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; box-sizing: border-box; }
+.habit-col-main { display: flex; align-items: center; gap: 8px; overflow: hidden; flex: 1; min-width: 0; }
 .habit-icon {
   width: 34px;
   height: 34px;
@@ -600,16 +602,16 @@ tr.drag-over {
   background: rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
 }
-.habit-title-wrap { overflow: hidden; flex: 1; }
-.habit-name { font-size: 13px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
-.habit-meta { display: flex; gap: 8px; align-items: center; margin-top: 3px; font-size: 11px; color: var(--muted); }
+.habit-title-wrap { overflow: hidden; flex: 1; min-width: 0; }
+.habit-name { font-size: 12px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 4px; }
+.habit-meta { display: flex; gap: 6px; align-items: center; margin-top: 2px; font-size: 10px; color: var(--muted); }
 .target-chip {
   background: var(--today-bg);
   color: var(--cyan);
   border: 1px solid var(--today-border);
-  padding: 1px 6px;
+  padding: 1px 5px;
   border-radius: 6px;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
 }
 .streak-chip { color: #ff9d00; font-weight: 800; display: inline-flex; align-items: center; gap: 2px; }
@@ -723,13 +725,17 @@ tr.drag-over {
   background: rgba(255, 255, 255, 0.14);
   color: var(--muted);
   border: 1px solid var(--line);
-  opacity: 0.5;
+  opacity: 0;
 }
-.cell-habit:hover .note-corner-trigger.no-note,
-.note-corner-trigger.no-note:active {
+.cell-habit:hover .note-corner-trigger.no-note {
   opacity: 1;
   background: var(--cyan);
   color: #fff;
+}
+@media (max-width: 768px), (pointer: coarse) {
+  .note-corner-trigger.no-note {
+    opacity: 0.6;
+  }
 }
 .note-corner-trigger:hover,
 .note-corner-trigger:active {
